@@ -1,0 +1,56 @@
+import mongoose, { Schema, Document, Model } from "mongoose";
+
+export interface IApplicant extends Document {
+  name: string;
+  rollNumber: string;
+  email?: string;
+  phone?: string;
+  department?: string;
+  branch?: string;
+  year?: string;
+  teamApplied?: string;
+  responses: Record<string, string>;
+  
+  interviewStatus: "Waiting" | "Interviewing" | "Approved" | "Pending" | "Discussion Needed";
+  assignedRoom?: number | null;
+  assignedInterviewer?: string;
+  interviewDuration?: number;
+  finalDecision?: string;
+  interviewNotes?: string;
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const ApplicantSchema: Schema = new Schema(
+  {
+    name: { type: String, required: true },
+    rollNumber: { type: String, required: true, unique: true },
+    email: { type: String },
+    phone: { type: String },
+    department: { type: String },
+    branch: { type: String },
+    year: { type: String },
+    teamApplied: { type: String },
+    responses: { type: Map, of: String, default: {} },
+    
+    interviewStatus: {
+      type: String,
+      enum: ["Waiting", "Interviewing", "Approved", "Pending", "Discussion Needed"],
+      default: "Waiting",
+    },
+    assignedRoom: { type: Number, default: null },
+    assignedInterviewer: { type: String, default: "" },
+    interviewDuration: { type: Number, default: 0 },
+    finalDecision: { type: String, default: "" },
+    interviewNotes: { type: String, default: "" },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+const Applicant: Model<IApplicant> =
+  mongoose.models.Applicant || mongoose.model<IApplicant>("Applicant", ApplicantSchema);
+
+export default Applicant;
