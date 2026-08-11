@@ -22,6 +22,10 @@ interface WorkspaceData {
   applicant: ApplicantData | null;
 }
 
+const Skeleton = ({ w = "w-full", h = "h-4" }: { w?: string; h?: string }) => (
+  <div className={`${h} ${w} bg-[#0B0D0C]/40 rounded animate-pulse`} />
+);
+
 function formatTime(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
@@ -136,9 +140,7 @@ export default function ActiveInterviewPage() {
     }
   };
 
-  const Skeleton = ({ w = "w-full", h = "h-4" }: { w?: string; h?: string }) => (
-    <div className={`${h} ${w} bg-[#0B0D0C]/40 rounded animate-pulse`} />
-  );
+
 
   if (error) {
     return (
@@ -255,7 +257,7 @@ export default function ActiveInterviewPage() {
                   <span className="material-symbols-outlined text-[18px]">feed</span> View Application
                 </button>
                 <button
-                  onClick={() => router.push(`/interviewer/evaluation?room=${roomNumber}`)}
+                  onClick={() => router.push(`/interviewer/evaluation?room=${roomNumber}&name=${encodeURIComponent(data?.room.interviewer || "")}`)}
                   className="px-4 py-5 bg-[#00FF66] text-[#050505] hover:bg-[#00B84A] rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(0,255,102,0.35)]"
                 >
                   <span className="material-symbols-outlined text-[18px] font-bold">assignment_turned_in</span> Begin Evaluation

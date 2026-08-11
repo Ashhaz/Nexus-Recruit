@@ -376,7 +376,6 @@ export default function AdminResultsPage() {
                         key={a._id} 
                         className="hover:bg-[#00FF66]/5 transition-colors cursor-pointer group"
                         onClick={() => {
-                          console.log("Setting selected applicant:", a);
                           setSelectedApplicant(a);
                         }}
                       >
