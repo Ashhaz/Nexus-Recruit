@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/ui/LogoutButton";
+import CustomCursor from "@/components/ui/CustomCursor";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -39,15 +40,15 @@ interface AnalyticsData {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<string, string> = {
-  Waiting:           "text-on-surface-variant bg-surface-variant/30",
-  Interviewing:      "text-primary bg-primary/10",
-  Approved:          "text-secondary bg-secondary/10",
-  Pending:           "text-yellow-400 bg-yellow-400/10",
-  "Discussion Needed": "text-error bg-error/10",
+  Waiting:           "text-[#8A938D] bg-[#8A938D]/10",
+  Interviewing:      "text-[#00FF66] bg-[#00FF66]/10 animate-pulse",
+  Approved:          "text-[#00FF66] bg-[#00FF66]/10",
+  Pending:           "text-[#FFB020] bg-[#FFB020]/10",
+  "Discussion Needed": "text-[#FF4D4D] bg-[#FF4D4D]/10",
 };
 
 function statusColor(s: string) {
-  return STATUS_COLORS[s] ?? "text-on-surface-variant bg-surface-variant/30";
+  return STATUS_COLORS[s] ?? "text-[#8A938D] bg-[#8A938D]/10";
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -135,10 +136,10 @@ export default function AdminAnalyticsPage() {
 
   // ── Loading skeleton ───────────────────────────────────────────────────────
   const SkeletonCard = () => (
-    <div className="glass-card p-md rounded-xl flex flex-col gap-xs animate-pulse">
-      <div className="h-3 bg-surface-variant/40 rounded w-1/2 mb-2" />
-      <div className="h-8 bg-surface-variant/30 rounded w-3/4" />
-      <div className="h-2 bg-surface-variant/20 rounded w-full mt-2" />
+    <div className="bg-[#101412] p-5 rounded-xl border border-[#1D2A22] flex flex-col gap-1 animate-pulse">
+      <div className="h-3 bg-[#0B0D0C] rounded w-1/2 mb-2" />
+      <div className="h-8 bg-[#0B0D0C] rounded w-3/4" />
+      <div className="h-2 bg-[#0B0D0C] rounded w-full mt-2" />
     </div>
   );
 
@@ -147,40 +148,42 @@ export default function AdminAnalyticsPage() {
     const pct = max > 0 ? Math.round((count / max) * 100) : 0;
     return (
       <div className="flex items-center gap-3">
-        <span className="text-sm text-on-surface w-36 truncate shrink-0">{label}</span>
-        <div className="flex-1 h-2 bg-surface-variant/30 rounded-full overflow-hidden">
+        <span className="text-sm text-[#F5F5F5] w-36 truncate shrink-0">{label}</span>
+        <div className="flex-1 h-2 bg-[#0B0D0C] rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full ${accent}`}
             style={{ width: `${pct}%`, transition: "width 0.6s ease" }}
           />
         </div>
-        <span className="text-sm font-mono text-on-surface-variant w-8 text-right shrink-0">{count}</span>
+        <span className="text-sm font-mono text-[#8A938D] w-8 text-right shrink-0">{count}</span>
       </div>
     );
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-background text-[#e1e2ed] font-body-md selection:bg-primary/30 selection:text-primary">
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#050505] text-[#F5F5F5] font-body-md selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+      <CustomCursor />
 
       {/* SideNavBar ────────────────────────────────────────────────────────── */}
-      <aside className="w-64 fixed left-0 top-0 z-40 bg-surface-container backdrop-blur-md border-r border-outline-variant/20 shadow-2xl flex-col h-full py-lg hidden md:flex">
-        <div className="px-md mb-xl">
-          <div className="flex items-center gap-sm">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
-              <span className="material-symbols-outlined text-[20px]">terminal</span>
+      <aside className="w-64 fixed left-0 top-0 z-40 bg-[#0B0D0C] border-r border-[#1D2A22] shadow-2xl flex flex-col h-full py-6 hidden md:flex">
+        <div className="px-6 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#00FF66] flex items-center justify-center text-[#050505] shadow-[0_0_12px_rgba(0,255,102,0.4)]">
+              <span className="material-symbols-outlined text-[20px] font-bold">terminal</span>
             </div>
             <div>
-              <h1 className="font-headline-sm text-headline-sm font-black text-primary">NEXUS</h1>
-              <p className="text-[10px] font-label-sm tracking-widest text-on-surface-variant uppercase">Recruitment Engine</p>
+              <h1 className="text-lg font-black text-[#F5F5F5] tracking-wider">NEXUS</h1>
+              <p className="text-[9px] font-bold tracking-widest text-[#8A938D] uppercase">Recruitment Engine</p>
             </div>
           </div>
         </div>
-        <nav className="flex-1 space-y-xs px-sm overflow-y-auto">
+        
+        <nav className="flex-1 space-y-1.5 px-4 overflow-y-auto">
           {[
             { href: "/admin/dashboard",  icon: "dashboard",           label: "Dashboard" },
             { href: "/admin/applicants", icon: "group",               label: "Applicants" },
-            { href: "/admin/rooms",      icon: "terminal",            label: "Interview Rooms" },
+            { href: "/admin/rooms",      icon: "terminal",            label: "Rooms" },
             { href: "/admin/results",    icon: "assignment_turned_in",label: "Results" },
             { href: "/admin/analytics",  icon: "analytics",           label: "Analytics" },
             { href: "/admin/settings",   icon: "settings",            label: "Settings" },
@@ -188,18 +191,18 @@ export default function AdminAnalyticsPage() {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-md px-md py-sm transition-all duration-300 ${
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${
                 pathname === href
-                  ? "bg-primary/10 text-primary border-r-2 border-primary shadow-[inset_0_0_12px_rgba(180,197,255,0.2)]"
-                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 hover:translate-x-1 transition-transform"
+                  ? "bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]"
+                  : "text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1"
               }`}
             >
-              <span className="material-symbols-outlined">{icon}</span>
-              <span className="font-label-md text-label-md">{label}</span>
+              <span className="material-symbols-outlined text-lg">{icon}</span>
+              <span className="text-xs font-bold uppercase tracking-wider">{label}</span>
             </Link>
           ))}
         </nav>
-        <div className="px-sm mt-auto">
+        <div className="px-4 mt-auto">
           <LogoutButton />
         </div>
       </aside>
@@ -208,23 +211,23 @@ export default function AdminAnalyticsPage() {
       <main className="md:ml-64 flex-1 flex flex-col min-h-screen relative">
 
         {/* TopNavBar */}
-        <header className="w-full sticky top-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/30 shadow-sm">
-          <div className="flex items-center justify-between px-gutter h-16 w-full max-w-container-max mx-auto">
+        <header className="w-full sticky top-0 z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-[#1D2A22] shadow-sm">
+          <div className="flex items-center justify-between px-8 h-16 w-full max-w-container-max mx-auto">
             <div className="flex items-center gap-xl">
-              <span className="font-headline-md text-headline-md font-bold tracking-tighter text-primary drop-shadow-[0_0_8px_rgba(180,197,255,0.5)] md:hidden">NEXUS</span>
+              <span className="text-xl font-black text-[#00FF66] drop-shadow-[0_0_8px_rgba(0,255,102,0.4)] md:hidden">NEXUS</span>
             </div>
-            <div className="flex items-center gap-md">
-              <button className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-full transition-all active:scale-95">
+            <div className="flex items-center gap-4">
+              <button className="p-2 text-[#8A938D] hover:text-[#00FF66] hover:bg-[#00FF66]/10 rounded-full transition-all">
                 <span className="material-symbols-outlined">notifications</span>
               </button>
-              <div className="h-8 w-[1px] bg-outline-variant/30 mx-1" />
-              <div className="flex items-center gap-sm cursor-pointer group">
+              <div className="h-6 w-[1px] bg-[#1D2A22] mx-1" />
+              <div className="flex items-center gap-3 cursor-pointer group">
                 <div className="text-right hidden sm:block">
-                  <p className="font-label-md text-label-md text-on-surface">System Admin</p>
-                  <p className="text-[10px] text-on-surface-variant">Active</p>
+                  <p className="text-xs font-bold text-[#F5F5F5]">System Admin</p>
+                  <p className="text-[10px] text-[#8A938D]">Active</p>
                 </div>
-                <div className="w-10 h-10 rounded-full border-2 border-primary/20 group-hover:border-primary transition-colors bg-primary/20 flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[20px]">shield_person</span>
+                <div className="w-9 h-9 rounded-full border border-[#1D2A22] group-hover:border-[#00FF66] transition-colors bg-[#0B0D0C] flex items-center justify-center text-[#00FF66]">
+                  <span className="material-symbols-outlined text-[18px]">shield_person</span>
                 </div>
               </div>
             </div>
@@ -232,20 +235,20 @@ export default function AdminAnalyticsPage() {
         </header>
 
         {/* Canvas */}
-        <div className="flex-1 p-lg space-y-lg overflow-x-hidden">
+        <div className="flex-1 p-8 space-y-8 overflow-x-hidden max-w-[1440px] mx-auto w-full">
 
           {/* Page header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-2">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <h2 className="font-headline-lg text-headline-lg text-primary glow-cyan">Analytics</h2>
-              <p className="text-on-surface-variant font-body-md text-body-md mt-sm">
+              <h2 className="text-2xl font-black tracking-wide text-[#F5F5F5] uppercase">Analytics Console</h2>
+              <p className="text-xs text-[#8A938D] mt-1 font-semibold uppercase tracking-wider">
                 Real-time recruitment insights powered by MongoDB.
               </p>
             </div>
             <button
               onClick={handleExportCSV}
               disabled={!analyticsData}
-              className="flex items-center gap-2 px-md py-sm bg-surface-variant/30 hover:bg-surface-variant/50 text-on-surface border border-outline-variant/30 rounded-xl font-label-md text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-5 py-2.5 bg-[#0B0D0C] hover:bg-[#00FF66] hover:text-[#050505] text-[#F5F5F5] border border-[#1D2A22] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
             >
               <span className="material-symbols-outlined text-[18px]">download</span>
               Export Analytics CSV
@@ -254,70 +257,70 @@ export default function AdminAnalyticsPage() {
 
           {/* Error */}
           {error && (
-            <div className="bg-error/10 border border-error/20 text-error p-4 rounded-xl flex items-center gap-3">
+            <div className="bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 text-[#FF4D4D] p-4 rounded-xl flex items-center gap-3">
               <span className="material-symbols-outlined">error</span>
-              <p>{error}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider">{error}</p>
             </div>
           )}
 
           {/* ── Overview Cards ─────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-md">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
             ) : analyticsData ? (
               <>
-                <div className="glass-card p-md rounded-xl flex flex-col gap-xs scan-line">
-                  <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">Total Apps</span>
-                  <span className="font-headline-lg text-headline-lg font-bold">{analyticsData.overview.total}</span>
-                  <div className="w-full h-1 bg-surface-variant rounded-full mt-sm">
-                    <div className="h-full bg-primary rounded-full w-full shadow-[0_0_8px_rgba(180,197,255,0.5)]" />
+                <div className="bg-[#101412] p-5 rounded-xl border border-[#1D2A22] flex flex-col gap-1 hover:border-[#00FF66]/30 transition-all duration-300 shadow-md scan-line">
+                  <span className="text-[9px] font-black text-[#00FF66] uppercase tracking-widest">Total Apps</span>
+                  <span className="text-4xl font-black text-[#F5F5F5] tracking-tight">{analyticsData.overview.total}</span>
+                  <div className="w-full h-1 bg-[#0B0D0C] rounded-full mt-2 overflow-hidden">
+                    <div className="h-full bg-[#00FF66] rounded-full w-full shadow-[0_0_8px_rgba(0,255,102,0.5)]" />
                   </div>
                 </div>
-                <div className="glass-card p-md rounded-xl flex flex-col gap-xs">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Waiting</span>
-                  <span className="font-headline-lg text-headline-lg font-bold">{analyticsData.overview.waiting}</span>
-                  <p className="text-[12px] text-on-surface-variant">In queue</p>
+                <div className="bg-[#101412] p-5 rounded-xl border border-[#1D2A22] flex flex-col gap-1 hover:border-[#00FF66]/30 transition-all duration-300 shadow-md">
+                  <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Waiting</span>
+                  <span className="text-4xl font-black text-[#8A938D] tracking-tight">{analyticsData.overview.waiting}</span>
+                  <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">In queue</p>
                 </div>
-                <div className="glass-card p-md rounded-xl flex flex-col gap-xs border-primary/20 bg-primary/5">
-                  <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Interviewing</span>
-                  <span className="font-headline-lg text-headline-lg font-bold gradient-text">{analyticsData.overview.interviewing}</span>
-                  <p className="text-[12px] text-on-surface-variant">Active now</p>
+                <div className="bg-[#101412] p-5 rounded-xl border border-[#00FF66]/20 bg-[#00FF66]/5 flex flex-col gap-1 hover:border-[#00FF66]/40 transition-all duration-300 shadow-md">
+                  <span className="text-[9px] font-black text-[#00FF66] uppercase tracking-widest">Interviewing</span>
+                  <span className="text-4xl font-black text-[#00FF66] tracking-tight gradient-text">{analyticsData.overview.interviewing}</span>
+                  <p className="text-[9px] text-[#00FF66]/70 mt-1 uppercase font-bold tracking-wider animate-pulse">Active now</p>
                 </div>
-                <div className="glass-card p-md rounded-xl flex flex-col gap-xs">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Approved</span>
-                  <span className="font-headline-lg text-headline-lg font-bold text-secondary">{analyticsData.overview.approved}</span>
-                  <p className="text-[12px] text-on-surface-variant">Ready for offer</p>
+                <div className="bg-[#101412] p-5 rounded-xl border border-[#1D2A22] flex flex-col gap-1 hover:border-[#00FF66]/30 transition-all duration-300 shadow-md">
+                  <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Approved</span>
+                  <span className="text-4xl font-black text-[#00FF66] tracking-tight">{analyticsData.overview.approved}</span>
+                  <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">Ready for offer</p>
                 </div>
-                <div className="glass-card p-md rounded-xl flex flex-col gap-xs">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Pending</span>
-                  <span className="font-headline-lg text-headline-lg font-bold">{analyticsData.overview.pending}</span>
-                  <p className="text-[12px] text-on-surface-variant">Awaiting action</p>
+                <div className="bg-[#101412] p-5 rounded-xl border border-[#1D2A22] flex flex-col gap-1 hover:border-[#00FF66]/30 transition-all duration-300 shadow-md">
+                  <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Pending</span>
+                  <span className="text-4xl font-black text-[#FFB020] tracking-tight">{analyticsData.overview.pending}</span>
+                  <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">Awaiting action</p>
                 </div>
-                <div className="glass-card p-md rounded-xl flex flex-col gap-xs">
-                  <span className="font-label-sm text-label-sm text-error uppercase tracking-wider">Attention</span>
-                  <span className="font-headline-lg text-headline-lg font-bold text-error">{analyticsData.overview.discussionNeeded}</span>
-                  <p className="text-[12px] text-on-surface-variant">Conflict in ratings</p>
+                <div className="bg-[#101412] p-5 rounded-xl border border-[#1D2A22] flex flex-col gap-1 hover:border-[#00FF66]/30 transition-all duration-300 shadow-md">
+                  <span className="text-[9px] font-black text-[#FF4D4D] uppercase tracking-widest">Attention</span>
+                  <span className="text-4xl font-black text-[#FF4D4D] tracking-tight">{analyticsData.overview.discussionNeeded}</span>
+                  <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">Conflict in ratings</p>
                 </div>
               </>
             ) : null}
           </div>
 
           {/* ── Middle Row: Departments + Status ──────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* Department Analytics */}
-            <div className="glass-card p-lg rounded-xl flex flex-col gap-md">
-              <div className="flex items-center gap-2 mb-sm">
-                <span className="material-symbols-outlined text-primary text-[20px]">school</span>
-                <h3 className="font-headline-sm text-on-surface">Department Breakdown</h3>
+            <div className="bg-[#101412] p-6 rounded-xl border border-[#1D2A22] flex flex-col gap-4 shadow-xl">
+              <div className="flex items-center gap-2 mb-1 border-b border-[#1D2A22] pb-3">
+                <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">school</span>
+                <h3 className="text-sm font-black text-[#F5F5F5] uppercase tracking-widest">Department Breakdown</h3>
               </div>
               {loading ? (
                 <div className="space-y-3 animate-pulse">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <div key={i} className="flex items-center gap-3">
-                      <div className="h-3 bg-surface-variant/40 rounded w-28" />
-                      <div className="flex-1 h-2 bg-surface-variant/30 rounded-full" />
-                      <div className="h-3 bg-surface-variant/30 rounded w-6" />
+                      <div className="h-3 bg-[#0B0D0C] rounded w-28" />
+                      <div className="flex-1 h-2 bg-[#0B0D0C] rounded-full" />
+                      <div className="h-3 bg-[#0B0D0C] rounded w-6" />
                     </div>
                   ))}
                 </div>
@@ -329,28 +332,28 @@ export default function AdminAnalyticsPage() {
                       label={d.name}
                       count={d.count}
                       max={analyticsData.departments[0]?.count ?? 1}
-                      accent="bg-primary"
+                      accent="bg-[#00FF66] shadow-[0_0_8px_rgba(0,255,102,0.4)]"
                     />
                   ))}
                 </div>
               ) : (
-                <p className="text-on-surface-variant text-sm">No department data available.</p>
+                <p className="text-[#8A938D] text-xs font-semibold uppercase tracking-wider py-4">No department data available.</p>
               )}
             </div>
 
             {/* Status Distribution */}
-            <div className="glass-card p-lg rounded-xl flex flex-col gap-md">
-              <div className="flex items-center gap-2 mb-sm">
-                <span className="material-symbols-outlined text-secondary text-[20px]">donut_large</span>
-                <h3 className="font-headline-sm text-on-surface">Status Distribution</h3>
+            <div className="bg-[#101412] p-6 rounded-xl border border-[#1D2A22] flex flex-col gap-4 shadow-xl">
+              <div className="flex items-center gap-2 mb-1 border-b border-[#1D2A22] pb-3">
+                <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">donut_large</span>
+                <h3 className="text-sm font-black text-[#F5F5F5] uppercase tracking-widest">Status Distribution</h3>
               </div>
               {loading ? (
                 <div className="space-y-3 animate-pulse">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <div key={i} className="flex items-center gap-3">
-                      <div className="h-3 bg-surface-variant/40 rounded w-36" />
-                      <div className="flex-1 h-2 bg-surface-variant/30 rounded-full" />
-                      <div className="h-3 bg-surface-variant/30 rounded w-6" />
+                      <div className="h-3 bg-[#0B0D0C] rounded w-36" />
+                      <div className="flex-1 h-2 bg-[#0B0D0C] rounded-full" />
+                      <div className="h-3 bg-[#0B0D0C] rounded w-6" />
                     </div>
                   ))}
                 </div>
@@ -358,34 +361,34 @@ export default function AdminAnalyticsPage() {
                 <div className="space-y-3">
                   {analyticsData.status.map(s => {
                     const accentMap: Record<string, string> = {
-                      Waiting: "bg-on-surface-variant",
-                      Interviewing: "bg-primary",
-                      Approved: "bg-secondary",
-                      Pending: "bg-yellow-400",
-                      "Discussion Needed": "bg-error",
+                      Waiting: "bg-[#8A938D]",
+                      Interviewing: "bg-[#00FF66] shadow-[0_0_8px_rgba(0,255,102,0.4)]",
+                      Approved: "bg-[#00FF66]",
+                      Pending: "bg-[#FFB020]",
+                      "Discussion Needed": "bg-[#FF4D4D]",
                     };
                     return (
                       <div key={s.status} className="flex items-center gap-3">
                         <div className="flex items-center gap-2 w-44 shrink-0">
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${accentMap[s.status] ?? "bg-on-surface-variant"}`} />
-                          <span className="text-sm text-on-surface truncate">{s.status}</span>
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${accentMap[s.status] ?? "bg-[#8A938D]"}`} />
+                          <span className="text-sm text-[#F5F5F5] truncate">{s.status}</span>
                         </div>
-                        <div className="flex-1 h-2 bg-surface-variant/30 rounded-full overflow-hidden">
+                        <div className="flex-1 h-2 bg-[#0B0D0C] rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full ${accentMap[s.status] ?? "bg-on-surface-variant"}`}
+                            className={`h-full rounded-full ${accentMap[s.status] ?? "bg-[#8A938D]"}`}
                             style={{
                               width: `${analyticsData.overview.total > 0 ? Math.round((s.count / analyticsData.overview.total) * 100) : 0}%`,
                               transition: "width 0.6s ease",
                             }}
                           />
                         </div>
-                        <span className="text-sm font-mono text-on-surface-variant w-8 text-right shrink-0">{s.count}</span>
+                        <span className="text-sm font-mono text-[#8A938D] w-8 text-right shrink-0">{s.count}</span>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <p className="text-on-surface-variant text-sm">No status data available.</p>
+                <p className="text-[#8A938D] text-xs font-semibold uppercase tracking-wider py-4">No status data available.</p>
               )}
             </div>
 
@@ -393,19 +396,19 @@ export default function AdminAnalyticsPage() {
 
           {/* ── Team Breakdown ─────────────────────────────────────────────── */}
           {(!loading && analyticsData && analyticsData.teams.length > 0) && (
-            <div className="glass-card p-lg rounded-xl flex flex-col gap-md">
-              <div className="flex items-center gap-2 mb-sm">
-                <span className="material-symbols-outlined text-primary text-[20px]">groups</span>
-                <h3 className="font-headline-sm text-on-surface">Applied Team Breakdown</h3>
+            <div className="bg-[#101412] p-6 rounded-xl border border-[#1D2A22] flex flex-col gap-4 shadow-xl">
+              <div className="flex items-center gap-2 mb-1 border-b border-[#1D2A22] pb-3">
+                <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">groups</span>
+                <h3 className="text-sm font-black text-[#F5F5F5] uppercase tracking-widest">Applied Team Breakdown</h3>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-md">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {analyticsData.teams.map(t => (
-                  <div key={t.name} className="bg-surface-variant/10 border border-outline-variant/15 rounded-xl p-md flex flex-col gap-xs">
-                    <p className="text-xs text-on-surface-variant truncate">{t.name}</p>
-                    <p className="font-headline-sm text-on-surface font-bold">{t.count}</p>
-                    <div className="w-full h-1 bg-surface-variant rounded-full mt-1">
+                  <div key={t.name} className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-xl p-4 flex flex-col gap-1 hover:border-[#00FF66]/30 transition-all duration-300 shadow-md">
+                    <p className="text-[10px] text-[#8A938D] font-bold uppercase tracking-wider truncate">{t.name}</p>
+                    <p className="text-2xl font-black text-[#F5F5F5] tracking-tight">{t.count}</p>
+                    <div className="w-full h-1 bg-[#0B0D0C] rounded-full mt-2 overflow-hidden">
                       <div
-                        className="h-full bg-secondary rounded-full"
+                        className="h-full bg-[#00FF66]"
                         style={{
                           width: `${analyticsData.teams[0]?.count > 0 ? Math.round((t.count / analyticsData.teams[0].count) * 100) : 0}%`,
                         }}
@@ -418,57 +421,57 @@ export default function AdminAnalyticsPage() {
           )}
 
           {/* ── Recent Activity ────────────────────────────────────────────── */}
-          <div className="glass-card rounded-xl border border-outline-variant/20 overflow-hidden">
-            <div className="flex items-center justify-between px-lg py-md border-b border-outline-variant/20">
+          <div className="bg-[#101412] rounded-xl border border-[#1D2A22] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#1D2A22] bg-[#0B0D0C]/20">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-[20px]">history</span>
-                <h3 className="font-headline-sm text-on-surface">Recent Activity</h3>
+                <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">history</span>
+                <h3 className="text-sm font-black text-[#F5F5F5] uppercase tracking-widest">Recent Synced Applicants</h3>
               </div>
-              <span className="text-xs text-on-surface-variant">Latest 10 applicants</span>
+              <span className="text-[10px] text-[#8A938D] font-bold uppercase tracking-wider">Latest 10 entries</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-surface-variant/10 border-b border-outline-variant/20">
-                    <th className="px-4 py-3 text-xs font-label-sm text-on-surface-variant uppercase tracking-wider">Name</th>
-                    <th className="px-4 py-3 text-xs font-label-sm text-on-surface-variant uppercase tracking-wider">Roll Number</th>
-                    <th className="px-4 py-3 text-xs font-label-sm text-on-surface-variant uppercase tracking-wider">Department</th>
-                    <th className="px-4 py-3 text-xs font-label-sm text-on-surface-variant uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-3 text-xs font-label-sm text-on-surface-variant uppercase tracking-wider text-right">Synced</th>
+                  <tr className="bg-[#0B0D0C] border-b border-[#1D2A22]">
+                    <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Name</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Roll Number</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Department</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Status</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest text-right">Synced Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-outline-variant/10">
+                <tbody className="divide-y divide-[#1D2A22]/50">
                   {loading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <tr key={i} className="animate-pulse">
-                        <td className="px-4 py-3"><div className="h-4 bg-surface-variant/40 rounded w-3/4" /></td>
-                        <td className="px-4 py-3"><div className="h-4 bg-surface-variant/30 rounded w-1/2" /></td>
-                        <td className="px-4 py-3"><div className="h-4 bg-surface-variant/30 rounded w-2/3" /></td>
-                        <td className="px-4 py-3"><div className="h-5 bg-surface-variant/30 rounded-full w-20" /></td>
-                        <td className="px-4 py-3 text-right"><div className="h-4 bg-surface-variant/20 rounded w-28 ml-auto" /></td>
+                        <td className="px-6 py-4"><div className="h-4 bg-[#0B0D0C] rounded w-3/4" /></td>
+                        <td className="px-6 py-4"><div className="h-4 bg-[#0B0D0C] rounded w-1/2" /></td>
+                        <td className="px-6 py-4"><div className="h-4 bg-[#0B0D0C] rounded w-2/3" /></td>
+                        <td className="px-6 py-4"><div className="h-5 bg-[#0B0D0C] rounded-full w-20" /></td>
+                        <td className="px-6 py-4 text-right"><div className="h-4 bg-[#0B0D0C] rounded w-28 ml-auto" /></td>
                       </tr>
                     ))
                   ) : analyticsData && analyticsData.recent.length > 0 ? (
                     analyticsData.recent.map(a => (
-                      <tr key={a._id} className="hover:bg-primary/5 transition-colors">
-                        <td className="px-4 py-3 text-sm font-medium text-on-surface">{a.name}</td>
-                        <td className="px-4 py-3 text-sm text-on-surface-variant">{a.rollNumber}</td>
-                        <td className="px-4 py-3 text-sm text-on-surface-variant">{a.department || "—"}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-label-sm uppercase tracking-wider ${statusColor(a.interviewStatus)}`}>
+                      <tr key={a._id} className="hover:bg-[#00FF66]/5 transition-colors">
+                        <td className="px-6 py-4 text-sm font-bold text-[#F5F5F5]">{a.name}</td>
+                        <td className="px-6 py-4 text-sm text-[#8A938D] font-mono">{a.rollNumber}</td>
+                        <td className="px-6 py-4 text-sm text-[#8A938D]">{a.department || "—"}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColor(a.interviewStatus)}`}>
                             {a.interviewStatus}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right text-xs text-on-surface-variant">
+                        <td className="px-6 py-4 text-right text-xs text-[#8A938D] font-mono">
                           {new Date(a.createdAt).toLocaleDateString()}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-4 py-12 text-center text-on-surface-variant">
-                        <span className="material-symbols-outlined text-4xl mb-2 opacity-40 block">person_off</span>
-                        No recent activity found.
+                      <td colSpan={5} className="px-6 py-12 text-center text-[#8A938D]">
+                        <span className="material-symbols-outlined text-4xl mb-2 text-[#8A938D]/40 block">person_off</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">No recent activity found.</span>
                       </td>
                     </tr>
                   )}
@@ -482,14 +485,8 @@ export default function AdminAnalyticsPage() {
 
       {/* Global CSS */}
       <style dangerouslySetInnerHTML={{ __html: `
-        .glass-card {
-          background: rgba(17, 24, 39, 0.7);
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(180, 197, 255, 0.1);
-        }
-        .glow-cyan { text-shadow: 0 0 8px rgba(76, 215, 246, 0.5); }
         .gradient-text {
-          background: linear-gradient(135deg, #b4c5ff 0%, #4cd7f6 100%);
+          background: linear-gradient(135deg, #00FF66 0%, #8A938D 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -497,7 +494,7 @@ export default function AdminAnalyticsPage() {
         .scan-line::after {
           content:'';
           position:absolute; inset:0;
-          background: linear-gradient(180deg, transparent 50%, rgba(180,197,255,0.03) 50%);
+          background: linear-gradient(180deg, transparent 50%, rgba(0,255,102,0.02) 50%);
           background-size: 100% 4px;
           pointer-events: none;
         }

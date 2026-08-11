@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import CustomCursor from "@/components/ui/CustomCursor";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,9 +44,9 @@ const DECISION_OPTIONS: Array<"Approved" | "Pending" | "Discussion Needed"> = [
 ];
 
 const DECISION_COLORS: Record<string, string> = {
-  Approved:            "border-secondary text-secondary bg-secondary/10",
-  Pending:             "border-yellow-400 text-yellow-400 bg-yellow-400/10",
-  "Discussion Needed": "border-error text-error bg-error/10",
+  Approved:            "border-[#00FF66] text-[#00FF66] bg-[#00FF66]/10 shadow-[0_0_12px_rgba(0,255,102,0.1)]",
+  Pending:             "border-[#FFB020] text-[#FFB020] bg-[#FFB020]/10 shadow-[0_0_12px_rgba(255,176,32,0.1)]",
+  "Discussion Needed": "border-[#FF4D4D] text-[#FF4D4D] bg-[#FF4D4D]/10 shadow-[0_0_12px_rgba(255,77,77,0.1)]",
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -134,53 +135,54 @@ export default function InterviewerEvaluationPage() {
 
   return (
     <div
-      className="min-h-screen bg-background text-[#e1e2ed] font-body-md selection:bg-primary/30 selection:text-primary"
+      className="min-h-screen bg-[#050505] text-[#F5F5F5] font-body-md selection:bg-[#00FF66]/30 selection:text-[#00FF66]"
     >
+      <CustomCursor />
+      
       {/* Top bar */}
       <header
-        className="w-full sticky top-0 z-50 border-b border-outline-variant/30 shadow-sm"
-        style={{ background: "rgba(11,17,32,0.85)", backdropFilter: "blur(20px)" }}
+        className="w-full sticky top-0 z-50 border-b border-[#1D2A22] bg-[#050505]/80 backdrop-blur-xl shadow-sm"
       >
-        <div className="flex items-center justify-between px-6 h-16 max-w-3xl mx-auto">
+        <div className="flex items-center justify-between px-8 h-16 max-w-3xl mx-auto">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className="p-2 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 transition-colors"
+              className="p-2 rounded-full text-[#8A938D] hover:text-[#00FF66] hover:bg-[#101412] transition-colors"
             >
-              <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+              <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
             </button>
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
-              <span className="material-symbols-outlined text-[18px]">terminal</span>
+            <div className="w-8 h-8 rounded-lg bg-[#00FF66] flex items-center justify-center text-[#050505] shadow-[0_0_12px_rgba(0,255,102,0.4)]">
+              <span className="material-symbols-outlined text-[18px] font-bold">terminal</span>
             </div>
             <div>
-              <p className="font-black text-primary text-sm tracking-tight">NEXUS</p>
-              <p className="text-[9px] text-on-surface-variant uppercase tracking-widest">Evaluation Form</p>
+              <p className="font-black text-[#F5F5F5] text-sm tracking-wide uppercase">NEXUS</p>
+              <p className="text-[9px] text-[#8A938D] font-bold uppercase tracking-widest">Evaluation Form</p>
             </div>
           </div>
           {snapshot && (
-            <p className="text-sm text-on-surface-variant hidden sm:block">
-              Evaluating: <span className="text-on-surface font-medium">{snapshot.applicant.name}</span>
+            <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider hidden sm:block">
+              Evaluating: <span className="text-[#F5F5F5] font-black">{snapshot.applicant.name}</span>
             </p>
           )}
         </div>
       </header>
 
       {/* Canvas */}
-      <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-3xl mx-auto px-8 py-8 space-y-6">
 
         {/* Submitted state */}
         {submitted && (
-          <div className="glass-card rounded-2xl p-10 flex flex-col items-center gap-5 text-center">
-            <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-secondary text-[36px]">check_circle</span>
+          <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-10 flex flex-col items-center gap-5 text-center shadow-xl">
+            <div className="w-16 h-16 rounded-full bg-[#00FF66]/10 flex items-center justify-center text-[#00FF66] border border-[#00FF66]/20">
+              <span className="material-symbols-outlined text-[36px]">check_circle</span>
             </div>
-            <h2 className="font-headline-md text-on-surface">Evaluation Submitted</h2>
-            <p className="text-on-surface-variant text-sm max-w-xs">
+            <h2 className="text-2xl font-black text-[#F5F5F5] uppercase tracking-wide">Evaluation Submitted</h2>
+            <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider max-w-xs">
               The evaluation for <strong>{snapshot?.applicant.name}</strong> has been saved successfully.
             </p>
             <button
               onClick={() => router.push(`/interviewer/dashboard?name=${encodeURIComponent(interviewerName)}`)}
-              className="px-6 py-3 bg-primary text-on-primary rounded-xl font-label-md text-sm hover:bg-primary/90 transition-colors shadow-[0_0_12px_rgba(180,197,255,0.3)]"
+              className="px-6 py-3 bg-[#00FF66] text-[#050505] hover:bg-[#00B84A] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-[0_0_15px_rgba(0,255,102,0.3)]"
             >
               Back to Dashboard
             </button>
@@ -189,28 +191,28 @@ export default function InterviewerEvaluationPage() {
 
         {/* Error loading snapshot */}
         {!submitted && snapshotError && (
-          <div className="bg-error/10 border border-error/30 text-error rounded-xl p-5 flex items-start gap-3">
+          <div className="bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 text-[#FF4D4D] rounded-xl p-5 flex items-start gap-3 shadow-md">
             <span className="material-symbols-outlined mt-0.5 flex-shrink-0">error</span>
-            <p>{snapshotError}</p>
+            <p className="text-xs font-bold uppercase tracking-wider">{snapshotError}</p>
           </div>
         )}
 
         {!submitted && !snapshotError && (
           <>
             {/* Applicant context banner */}
-            <div className="glass-card rounded-2xl p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-primary text-[24px]">person</span>
+            <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-5 flex items-center gap-4 shadow-xl">
+              <div className="w-12 h-12 rounded-lg bg-[#00FF66]/10 border border-[#00FF66]/20 flex items-center justify-center flex-shrink-0 text-[#00FF66]">
+                <span className="material-symbols-outlined text-[24px]">person</span>
               </div>
               {loadingSnapshot ? (
                 <div className="space-y-2 flex-1">
-                  <div className="h-4 bg-surface-variant/40 rounded animate-pulse w-1/3" />
-                  <div className="h-3 bg-surface-variant/30 rounded animate-pulse w-1/4" />
+                  <div className="h-4 bg-[#0B0D0C]/40 rounded animate-pulse w-1/3" />
+                  <div className="h-3 bg-[#0B0D0C]/30 rounded animate-pulse w-1/4" />
                 </div>
               ) : snapshot ? (
                 <div>
-                  <p className="text-base font-bold text-on-surface">{snapshot.applicant.name}</p>
-                  <p className="text-xs text-on-surface-variant">
+                  <p className="text-base font-black text-[#F5F5F5] uppercase tracking-wide">{snapshot.applicant.name}</p>
+                  <p className="text-xs text-[#8A938D] font-semibold mt-1">
                     {snapshot.applicant.rollNumber}
                     {snapshot.applicant.department ? ` · ${snapshot.applicant.department}` : ""}
                     {" · "}Room {snapshot.room.roomNumber}
@@ -220,18 +222,18 @@ export default function InterviewerEvaluationPage() {
             </div>
 
             {/* ── Ratings ─────────────────────────────────────────────────── */}
-            <div className="glass-card rounded-2xl p-6">
-              <div className="flex items-center gap-2 mb-6">
-                <span className="material-symbols-outlined text-primary text-[20px]">star</span>
-                <h2 className="text-sm font-semibold text-on-surface uppercase tracking-wider">Performance Ratings</h2>
-                <span className="text-xs text-on-surface-variant ml-auto">Scale: 1 – 10</span>
+            <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-6 shadow-xl">
+              <div className="flex items-center gap-2 mb-6 border-b border-[#1D2A22]/50 pb-3">
+                <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">star</span>
+                <h2 className="text-xs font-black text-[#F5F5F5] uppercase tracking-widest">Performance Ratings</h2>
+                <span className="text-[10px] text-[#8A938D] font-bold uppercase tracking-wider ml-auto">Scale: 1 – 10</span>
               </div>
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {RATING_LABELS.map((key) => (
                   <div key={key}>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm text-on-surface capitalize font-medium">{key}</label>
-                      <span className="text-sm font-mono font-bold text-primary w-6 text-center">
+                      <label className="text-xs text-[#8A938D] uppercase tracking-widest font-black capitalize">{key}</label>
+                      <span className="text-sm font-mono font-bold text-[#00FF66] w-6 text-center">
                         {ratings[key]}
                       </span>
                     </div>
@@ -245,12 +247,12 @@ export default function InterviewerEvaluationPage() {
                         onChange={(e) =>
                           setRatings((prev) => ({ ...prev, [key]: Number(e.target.value) }))
                         }
-                        className="w-full accent-primary"
-                        style={{ accentColor: "#b4c5ff" }}
+                        className="w-full accent-[#00FF66] cursor-pointer"
+                        style={{ accentColor: "#00FF66" }}
                       />
-                      <div className="flex justify-between mt-1">
+                      <div className="flex justify-between mt-1 px-1">
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                          <span key={n} className={`text-[9px] ${ratings[key] >= n ? "text-primary" : "text-on-surface-variant/40"}`}>
+                          <span key={n} className={`text-[9px] font-mono ${ratings[key] >= n ? "text-[#00FF66] font-bold" : "text-[#8A938D]/30"}`}>
                             {n}
                           </span>
                         ))}
@@ -261,47 +263,47 @@ export default function InterviewerEvaluationPage() {
               </div>
 
               {/* Average indicator */}
-              <div className="mt-6 pt-4 border-t border-outline-variant/15 flex items-center justify-between">
-                <span className="text-xs text-on-surface-variant uppercase tracking-wider">Overall Average</span>
-                <span className="text-xl font-bold font-mono text-primary">
+              <div className="mt-8 pt-4 border-t border-[#1D2A22]/50 flex items-center justify-between">
+                <span className="text-[10px] text-[#8A938D] font-black uppercase tracking-widest">Overall Average</span>
+                <span className="text-xl font-bold font-mono text-[#00FF66]">
                   {(Object.values(ratings).reduce((a, b) => a + b, 0) / 5).toFixed(1)}
-                  <span className="text-sm text-on-surface-variant font-normal"> / 10</span>
+                  <span className="text-xs text-[#8A938D] font-normal"> / 10</span>
                 </span>
               </div>
             </div>
 
             {/* ── Notes ───────────────────────────────────────────────────── */}
-            <div className="glass-card rounded-2xl p-6">
+            <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-6 shadow-xl">
               <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-secondary text-[20px]">edit_note</span>
-                <h2 className="text-sm font-semibold text-on-surface uppercase tracking-wider">Interview Notes</h2>
-                <span className="text-xs text-on-surface-variant ml-auto">Optional</span>
+                <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">edit_note</span>
+                <h2 className="text-xs font-black text-[#F5F5F5] uppercase tracking-widest">Interview Notes</h2>
+                <span className="text-[9px] text-[#8A938D] font-bold uppercase tracking-wider ml-auto">Optional</span>
               </div>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={5}
                 placeholder="Add observations, strengths, concerns, or any noteworthy information about the candidate..."
-                className="w-full bg-surface-variant/20 border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface placeholder:text-outline-variant focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none resize-none"
+                className="w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg px-4 py-3 text-sm text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none resize-none"
               />
-              <p className="text-xs text-on-surface-variant mt-2 text-right">{notes.length} characters</p>
+              <p className="text-[10px] text-[#8A938D] mt-2 text-right font-bold uppercase tracking-wider">{notes.length} characters</p>
             </div>
 
             {/* ── Final Decision ───────────────────────────────────────────── */}
-            <div className="glass-card rounded-2xl p-6">
+            <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-6 shadow-xl">
               <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-primary text-[20px]">gavel</span>
-                <h2 className="text-sm font-semibold text-on-surface uppercase tracking-wider">Final Decision</h2>
+                <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">gavel</span>
+                <h2 className="text-xs font-black text-[#F5F5F5] uppercase tracking-widest">Final Decision</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {DECISION_OPTIONS.map((opt) => (
                   <button
                     key={opt}
                     onClick={() => setDecision(opt)}
-                    className={`py-3 px-4 rounded-xl border-2 text-sm font-label-md transition-all ${
+                    className={`py-3 px-4 rounded-lg border-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                       decision === opt
                         ? DECISION_COLORS[opt]
-                        : "border-outline-variant/30 text-on-surface-variant hover:border-outline-variant/60 hover:text-on-surface"
+                        : "border-[#1D2A22] text-[#8A938D] hover:border-[#8A938D]/50 hover:text-[#F5F5F5] bg-transparent"
                     }`}
                   >
                     {opt}
@@ -312,7 +314,7 @@ export default function InterviewerEvaluationPage() {
 
             {/* ── Submit ───────────────────────────────────────────────────── */}
             {submitError && (
-              <div className="bg-error/10 border border-error/30 text-error rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+              <div className="bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 text-[#FF4D4D] rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">error</span>
                 {submitError}
               </div>
@@ -321,16 +323,16 @@ export default function InterviewerEvaluationPage() {
             <button
               onClick={handleSubmit}
               disabled={submitting || !decision || loadingSnapshot}
-              className="w-full py-4 bg-primary text-on-primary hover:bg-primary/90 rounded-xl font-label-md text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(180,197,255,0.35)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 bg-[#00FF66] text-[#050505] hover:bg-[#00B84A] rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,255,102,0.35)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-[#050505]/30 border-t-[#050505] rounded-full animate-spin" />
                   Submitting Evaluation...
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-[18px]">send</span>
+                  <span className="material-symbols-outlined text-[18px] font-bold">send</span>
                   Submit Evaluation
                 </>
               )}
@@ -339,15 +341,6 @@ export default function InterviewerEvaluationPage() {
         )}
 
       </div>
-
-      {/* Global CSS */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        .glass-card {
-          background: rgba(17, 24, 39, 0.7);
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(180, 197, 255, 0.1);
-        }
-      ` }} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/ui/LogoutButton";
+import CustomCursor from "@/components/ui/CustomCursor";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -117,19 +118,19 @@ export default function AdminSettingsPage() {
 
   const StatusBadge = ({ ok }: { ok: boolean }) => (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-label-sm uppercase tracking-wider ${
-        ok ? "bg-secondary/10 text-secondary" : "bg-error/10 text-error"
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+        ok ? "bg-[#00FF66]/10 text-[#00FF66] border-[#00FF66]/20" : "bg-[#FF4D4D]/10 text-[#FF4D4D] border-[#FF4D4D]/20"
       }`}
     >
       <span
-        className={`w-1.5 h-1.5 rounded-full ${ok ? "bg-secondary animate-pulse" : "bg-error"}`}
+        className={`w-1.5 h-1.5 rounded-full ${ok ? "bg-[#00FF66] animate-pulse" : "bg-[#FF4D4D]"}`}
       />
       {ok ? "Connected" : "Disconnected"}
     </span>
   );
 
   const SkeletonLine = ({ w = "w-1/2" }: { w?: string }) => (
-    <div className={`h-4 bg-surface-variant/40 rounded animate-pulse ${w}`} />
+    <div className={`h-4 bg-[#0B0D0C] rounded animate-pulse ${w}`} />
   );
 
   const SectionHeading = ({
@@ -141,13 +142,13 @@ export default function AdminSettingsPage() {
     title: string;
     subtitle?: string;
   }) => (
-    <div className="flex items-start gap-3 mb-lg">
-      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-        <span className="material-symbols-outlined text-primary text-[20px]">{icon}</span>
+    <div className="flex items-start gap-3 mb-6">
+      <div className="w-9 h-9 rounded-lg bg-[#00FF66]/10 flex items-center justify-center flex-shrink-0 border border-[#00FF66]/20">
+        <span className="material-symbols-outlined text-[#00FF66] text-[20px] font-bold">{icon}</span>
       </div>
       <div>
-        <h3 className="font-headline-sm text-on-surface">{title}</h3>
-        {subtitle && <p className="text-xs text-on-surface-variant mt-0.5">{subtitle}</p>}
+        <h3 className="text-sm font-black uppercase tracking-wider text-[#F5F5F5]">{title}</h3>
+        {subtitle && <p className="text-[10px] text-[#8A938D] font-semibold uppercase tracking-wider mt-0.5">{subtitle}</p>}
       </div>
     </div>
   );
@@ -159,35 +160,36 @@ export default function AdminSettingsPage() {
     label: string;
     value: React.ReactNode;
   }) => (
-    <div className="flex items-center justify-between py-3 border-b border-outline-variant/10 last:border-0">
-      <span className="text-sm text-on-surface-variant">{label}</span>
-      <span className="text-sm text-on-surface font-medium text-right">{value}</span>
+    <div className="flex items-center justify-between py-3 border-b border-[#1D2A22]/50 last:border-0">
+      <span className="text-xs text-[#8A938D] font-bold uppercase tracking-wider">{label}</span>
+      <span className="text-sm text-[#F5F5F5] font-semibold text-right">{value}</span>
     </div>
   );
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-background text-[#e1e2ed] font-body-md selection:bg-primary/30 selection:text-primary">
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#050505] text-[#F5F5F5] font-body-md selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+      <CustomCursor />
 
       {/* SideNavBar ────────────────────────────────────────────────────────── */}
-      <aside className="w-64 fixed left-0 top-0 z-40 bg-surface-container backdrop-blur-md border-r border-outline-variant/20 shadow-2xl flex-col h-full py-lg hidden md:flex">
-        <div className="px-md mb-xl">
-          <div className="flex items-center gap-sm">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
-              <span className="material-symbols-outlined text-[20px]">terminal</span>
+      <aside className="w-64 fixed left-0 top-0 z-40 bg-[#0B0D0C] border-r border-[#1D2A22] shadow-2xl flex-col h-full py-8 hidden md:flex">
+        <div className="px-6 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#00FF66] flex items-center justify-center text-[#050505] shadow-[0_0_12px_rgba(0,255,102,0.4)]">
+              <span className="material-symbols-outlined text-[20px] font-bold">terminal</span>
             </div>
             <div>
-              <h1 className="font-headline-sm text-headline-sm font-black text-primary">NEXUS</h1>
-              <p className="text-[10px] font-label-sm tracking-widest text-on-surface-variant uppercase">Recruitment Engine</p>
+              <h1 className="text-lg font-black text-[#F5F5F5] tracking-wider">NEXUS</h1>
+              <p className="text-[9px] font-bold tracking-widest text-[#8A938D] uppercase">Recruitment Engine</p>
             </div>
           </div>
         </div>
-        <nav className="flex-1 space-y-xs px-sm overflow-y-auto">
+        <nav className="flex-1 space-y-1.5 px-4 overflow-y-auto">
           {[
             { href: "/admin/dashboard",  icon: "dashboard",            label: "Dashboard" },
             { href: "/admin/applicants", icon: "group",                label: "Applicants" },
-            { href: "/admin/rooms",      icon: "terminal",             label: "Interview Rooms" },
+            { href: "/admin/rooms",      icon: "terminal",             label: "Rooms" },
             { href: "/admin/results",    icon: "assignment_turned_in", label: "Results" },
             { href: "/admin/analytics",  icon: "analytics",            label: "Analytics" },
             { href: "/admin/settings",   icon: "settings",             label: "Settings" },
@@ -195,18 +197,18 @@ export default function AdminSettingsPage() {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-md px-md py-sm transition-all duration-300 ${
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${
                 pathname === href
-                  ? "bg-primary/10 text-primary border-r-2 border-primary shadow-[inset_0_0_12px_rgba(180,197,255,0.2)]"
-                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 hover:translate-x-1 transition-transform"
+                  ? "bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]"
+                  : "text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1"
               }`}
             >
-              <span className="material-symbols-outlined">{icon}</span>
-              <span className="font-label-md text-label-md">{label}</span>
+              <span className="material-symbols-outlined text-lg">{icon}</span>
+              <span className="text-xs font-bold uppercase tracking-wider">{label}</span>
             </Link>
           ))}
         </nav>
-        <div className="px-sm mt-auto">
+        <div className="px-4 mt-auto">
           <LogoutButton />
         </div>
       </aside>
@@ -215,20 +217,20 @@ export default function AdminSettingsPage() {
       <main className="md:ml-64 flex-1 flex flex-col min-h-screen relative">
 
         {/* TopNavBar */}
-        <header className="w-full sticky top-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/30 shadow-sm">
-          <div className="flex items-center justify-between px-gutter h-16 w-full max-w-container-max mx-auto">
-            <span className="font-headline-md text-headline-md font-bold tracking-tighter text-primary drop-shadow-[0_0_8px_rgba(180,197,255,0.5)] md:hidden">NEXUS</span>
-            <div className="flex items-center gap-md ml-auto">
-              <button className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-full transition-all active:scale-95">
+        <header className="w-full sticky top-0 z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-[#1D2A22] shadow-sm">
+          <div className="flex items-center justify-between px-8 h-16 w-full max-w-container-max mx-auto">
+            <span className="text-xl font-black text-[#00FF66] drop-shadow-[0_0_8px_rgba(0,255,102,0.4)] md:hidden">NEXUS</span>
+            <div className="flex items-center gap-4 ml-auto">
+              <button className="p-2 text-[#8A938D] hover:text-[#00FF66] hover:bg-[#00FF66]/10 rounded-full transition-all">
                 <span className="material-symbols-outlined">notifications</span>
               </button>
-              <div className="h-8 w-[1px] bg-outline-variant/30 mx-1" />
-              <div className="flex items-center gap-sm cursor-pointer group">
+              <div className="h-6 w-[1px] bg-[#1D2A22] mx-1" />
+              <div className="flex items-center gap-3 cursor-pointer group">
                 <div className="text-right hidden sm:block">
-                  <p className="font-label-md text-label-md text-on-surface">System Admin</p>
-                  <p className="text-[10px] text-on-surface-variant">Active</p>
+                  <p className="text-xs font-bold text-[#F5F5F5]">System Admin</p>
+                  <p className="text-[10px] text-[#8A938D] font-semibold uppercase tracking-wider">Active</p>
                 </div>
-                <div className="w-10 h-10 rounded-full border-2 border-primary/20 group-hover:border-primary transition-colors bg-primary/20 flex items-center justify-center text-primary">
+                <div className="w-10 h-10 rounded-full border-2 border-[#1D2A22] group-hover:border-[#00FF66]/40 transition-colors bg-[#101412] flex items-center justify-center text-[#00FF66]">
                   <span className="material-symbols-outlined text-[20px]">shield_person</span>
                 </div>
               </div>
@@ -237,35 +239,35 @@ export default function AdminSettingsPage() {
         </header>
 
         {/* Canvas */}
-        <div className="flex-1 p-lg max-w-4xl mx-auto w-full space-y-lg overflow-x-hidden">
+        <div className="flex-1 p-8 max-w-4xl mx-auto w-full space-y-6 overflow-x-hidden">
 
           {/* Page header */}
           <div className="mb-2">
-            <h2 className="font-headline-lg text-headline-lg text-primary glow-cyan">Settings</h2>
-            <p className="text-on-surface-variant font-body-md text-body-md mt-sm">
+            <h2 className="text-3xl font-black text-[#F5F5F5] uppercase tracking-wide drop-shadow-[0_0_8px_rgba(0,255,102,0.3)]">Settings</h2>
+            <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider mt-1.5">
               System configuration, status and administration.
             </p>
           </div>
 
           {/* ── 1. Admin Profile ─────────────────────────────────────────────── */}
-          <section className="glass-card p-lg rounded-xl">
+          <section className="glass-card p-6 rounded-xl">
             <SectionHeading icon="manage_accounts" title="Admin Profile" subtitle="Current operator information" />
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-primary/20 border-2 border-primary/30 flex items-center justify-center text-primary flex-shrink-0">
+                <div className="w-16 h-16 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/20 flex items-center justify-center text-[#00FF66] flex-shrink-0">
                   <span className="material-symbols-outlined text-[32px]">shield_person</span>
                 </div>
                 <div>
-                  <p className="text-lg font-semibold text-on-surface">System Admin</p>
-                  <p className="text-sm text-on-surface-variant">Admin Role</p>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] bg-secondary/10 text-secondary uppercase tracking-wider mt-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                  <p className="text-lg font-black text-[#F5F5F5] uppercase tracking-wide">System Admin</p>
+                  <p className="text-xs text-[#8A938D] font-bold mt-0.5 uppercase tracking-wider">Admin Role</p>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/20 uppercase tracking-wider mt-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00FF66] animate-pulse" />
                     Active Session
                   </span>
                 </div>
               </div>
               <button
-                className="px-md py-sm bg-surface-variant/30 hover:bg-surface-variant/50 text-on-surface-variant hover:text-on-surface border border-outline-variant/30 rounded-xl text-sm font-label-md transition-colors flex items-center gap-2"
+                className="px-4 py-2.5 bg-[#0B0D0C] hover:bg-[#101412] hover:text-[#00FF66] border border-[#1D2A22] text-[#8A938D] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-2"
                 title="Edit profile — coming soon"
               >
                 <span className="material-symbols-outlined text-[18px]">edit</span>
@@ -275,20 +277,20 @@ export default function AdminSettingsPage() {
           </section>
 
           {/* ── 2. System Status ──────────────────────────────────────────────── */}
-          <section className="glass-card p-lg rounded-xl">
+          <section className="glass-card p-6 rounded-xl">
             <SectionHeading
               icon="health_and_safety"
               title="System Status"
               subtitle="Live connection and environment information"
             />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
               {/* MongoDB */}
-              <div className="bg-surface-variant/10 border border-outline-variant/10 rounded-xl p-md flex flex-col gap-2">
+              <div className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg p-4 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] text-on-surface-variant">database</span>
-                    <p className="text-xs font-label-sm text-on-surface-variant uppercase tracking-wider">MongoDB</p>
+                    <span className="material-symbols-outlined text-[18px] text-[#8A938D]">database</span>
+                    <p className="text-[10px] font-bold text-[#8A938D] uppercase tracking-wider">MongoDB</p>
                   </div>
                   {settingsLoading ? (
                     <SkeletonLine w="w-20" />
@@ -296,17 +298,17 @@ export default function AdminSettingsPage() {
                     <StatusBadge ok={settings?.mongodbConnected ?? false} />
                   )}
                 </div>
-                <p className="text-sm text-on-surface">
+                <p className="text-sm font-semibold text-[#F5F5F5] mt-1">
                   {settingsLoading ? "—" : settings?.mongodbConnected ? "Atlas cluster connected" : "Not reachable"}
                 </p>
               </div>
 
               {/* Google Sheets */}
-              <div className="bg-surface-variant/10 border border-outline-variant/10 rounded-xl p-md flex flex-col gap-2">
+              <div className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg p-4 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] text-on-surface-variant">table_chart</span>
-                    <p className="text-xs font-label-sm text-on-surface-variant uppercase tracking-wider">Google Sheets</p>
+                    <span className="material-symbols-outlined text-[18px] text-[#8A938D]">table_chart</span>
+                    <p className="text-[10px] font-bold text-[#8A938D] uppercase tracking-wider">Google Sheets</p>
                   </div>
                   {settingsLoading ? (
                     <SkeletonLine w="w-20" />
@@ -314,21 +316,21 @@ export default function AdminSettingsPage() {
                     <StatusBadge ok={settings?.googleSheetsConnected ?? false} />
                   )}
                 </div>
-                <p className="text-sm text-on-surface">
+                <p className="text-sm font-semibold text-[#F5F5F5] mt-1">
                   {settingsLoading ? "—" : settings?.googleSheetsConnected ? "Credentials configured" : "Missing credentials"}
                 </p>
               </div>
 
               {/* Last Sync */}
-              <div className="bg-surface-variant/10 border border-outline-variant/10 rounded-xl p-md flex flex-col gap-2">
+              <div className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg p-4 flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px] text-on-surface-variant">sync</span>
-                  <p className="text-xs font-label-sm text-on-surface-variant uppercase tracking-wider">Last Successful Sync</p>
+                  <span className="material-symbols-outlined text-[18px] text-[#8A938D]">sync</span>
+                  <p className="text-[10px] font-bold text-[#8A938D] uppercase tracking-wider">Last Successful Sync</p>
                 </div>
                 {settingsLoading ? (
                   <SkeletonLine w="w-3/4" />
                 ) : (
-                  <p className="text-sm text-on-surface font-mono">
+                  <p className="text-sm font-semibold text-[#F5F5F5] font-mono mt-1">
                     {settings?.lastSync
                       ? new Date(settings.lastSync).toLocaleString()
                       : "No sync recorded"}
@@ -337,32 +339,32 @@ export default function AdminSettingsPage() {
               </div>
 
               {/* Total Applicants */}
-              <div className="bg-surface-variant/10 border border-outline-variant/10 rounded-xl p-md flex flex-col gap-2">
+              <div className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg p-4 flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px] text-on-surface-variant">group</span>
-                  <p className="text-xs font-label-sm text-on-surface-variant uppercase tracking-wider">Total Applicants</p>
+                  <span className="material-symbols-outlined text-[18px] text-[#8A938D]">group</span>
+                  <p className="text-[10px] font-bold text-[#8A938D] uppercase tracking-wider">Total Applicants</p>
                 </div>
                 {settingsLoading ? (
                   <SkeletonLine w="w-16" />
                 ) : (
-                  <p className="text-2xl font-bold text-primary font-mono">
+                  <p className="text-2xl font-black text-[#00FF66] font-mono mt-1">
                     {settings?.totalApplicants ?? "—"}
                   </p>
                 )}
               </div>
 
               {/* Environment */}
-              <div className="bg-surface-variant/10 border border-outline-variant/10 rounded-xl p-md flex flex-col gap-2 sm:col-span-2">
+              <div className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg p-4 flex flex-col gap-2 sm:col-span-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] text-on-surface-variant">developer_mode</span>
-                    <p className="text-xs font-label-sm text-on-surface-variant uppercase tracking-wider">Environment</p>
+                    <span className="material-symbols-outlined text-[18px] text-[#8A938D]">developer_mode</span>
+                    <p className="text-[10px] font-bold text-[#8A938D] uppercase tracking-wider">Environment</p>
                   </div>
                   {!settingsLoading && settings && (
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider font-label-sm ${
+                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
                       settings.environment === "Production"
-                        ? "bg-secondary/10 text-secondary"
-                        : "bg-yellow-400/10 text-yellow-400"
+                        ? "bg-[#00FF66]/10 text-[#00FF66] border-[#00FF66]/20"
+                        : "bg-[#FFB020]/10 text-[#FFB020] border-[#FFB020]/20"
                     }`}>
                       {settings.environment}
                     </span>
@@ -371,7 +373,7 @@ export default function AdminSettingsPage() {
                 {settingsLoading ? (
                   <SkeletonLine w="w-1/3" />
                 ) : (
-                  <p className="text-sm text-on-surface">{settings?.environment ?? "—"}</p>
+                  <p className="text-sm font-semibold text-[#F5F5F5] mt-1">{settings?.environment ?? "—"}</p>
                 )}
               </div>
 
@@ -379,17 +381,17 @@ export default function AdminSettingsPage() {
           </section>
 
           {/* ── 3. Synchronization ───────────────────────────────────────────── */}
-          <section className="glass-card p-lg rounded-xl">
+          <section className="glass-card p-6 rounded-xl">
             <SectionHeading
               icon="cloud_sync"
               title="Synchronization"
               subtitle="Manage data synchronization from Google Sheets"
             />
-            <div className="flex flex-col sm:flex-row gap-md">
+            <div className="flex flex-col sm:flex-row gap-4">
 
-              <div className="flex-1 bg-surface-variant/10 border border-outline-variant/10 rounded-xl p-md flex flex-col gap-2">
-                <p className="text-xs text-on-surface-variant uppercase tracking-wider font-label-sm">Last Sync</p>
-                <p className="text-sm text-on-surface font-mono">
+              <div className="flex-1 bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg p-4 flex flex-col gap-2">
+                <p className="text-[9px] text-[#8A938D] uppercase tracking-wider font-bold">Last Sync</p>
+                <p className="text-sm font-semibold text-[#F5F5F5] font-mono mt-1">
                   {settingsLoading
                     ? "—"
                     : settings?.lastSync
@@ -398,20 +400,20 @@ export default function AdminSettingsPage() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-sm sm:justify-end">
+              <div className="flex flex-col gap-3 sm:justify-end">
                 <button
                   onClick={handleSync}
                   disabled={isSyncing || isRefreshing}
-                  className="px-md py-sm bg-primary text-on-primary hover:bg-primary/90 rounded-xl font-label-md text-sm transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(180,197,255,0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="px-4 py-2.5 bg-[#00FF66] text-[#050505] hover:bg-[#00B84A] rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,255,102,0.35)] disabled:opacity-60 disabled:cursor-not-allowed font-black"
                 >
                   {isSyncing ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-[#050505]/30 border-t-[#050505] rounded-full animate-spin" />
                       Syncing...
                     </>
                   ) : (
                     <>
-                      <span className="material-symbols-outlined text-[18px]">sync</span>
+                      <span className="material-symbols-outlined text-[18px] font-bold">sync</span>
                       Sync Applicants
                     </>
                   )}
@@ -419,11 +421,11 @@ export default function AdminSettingsPage() {
                 <button
                   onClick={handleRefresh}
                   disabled={isSyncing || isRefreshing}
-                  className="px-md py-sm bg-surface-variant/30 hover:bg-surface-variant/50 text-on-surface border border-outline-variant/30 rounded-xl font-label-md text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="px-4 py-2.5 bg-[#0B0D0C] hover:bg-[#101412] hover:text-[#00FF66] border border-[#1D2A22] text-[#F5F5F5] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isRefreshing ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-on-surface/30 border-t-on-surface rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-[#F5F5F5]/30 border-t-[#F5F5F5] rounded-full animate-spin" />
                       Refreshing...
                     </>
                   ) : (
@@ -438,18 +440,18 @@ export default function AdminSettingsPage() {
           </section>
 
           {/* ── 4. System Information ─────────────────────────────────────────── */}
-          <section className="glass-card p-lg rounded-xl">
+          <section className="glass-card p-6 rounded-xl">
             <SectionHeading
               icon="info"
               title="System Information"
               subtitle="Application build and runtime details"
             />
-            <div className="bg-surface-variant/10 border border-outline-variant/10 rounded-xl px-md">
+            <div className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg px-4">
               <InfoRow label="Application Name" value="NEXUS Recruitment Engine" />
               <InfoRow
                 label="Version"
                 value={
-                  <span className="font-mono text-primary">
+                  <span className="font-mono text-[#00FF66]">
                     {settingsLoading ? "—" : settings?.version ?? "v1.0.0"}
                   </span>
                 }
@@ -460,7 +462,7 @@ export default function AdminSettingsPage() {
               <InfoRow
                 label="Node Version"
                 value={
-                  <span className="font-mono text-secondary">
+                  <span className="font-mono text-[#00FF66]">
                     {settingsLoading ? "—" : settings?.nodeVersion ?? "—"}
                   </span>
                 }
@@ -474,8 +476,8 @@ export default function AdminSettingsPage() {
                     <span
                       className={
                         settings?.environment === "Production"
-                          ? "text-secondary"
-                          : "text-yellow-400"
+                          ? "text-[#00FF66]"
+                          : "text-[#FFB020]"
                       }
                     >
                       {settings?.environment ?? "—"}
@@ -487,29 +489,29 @@ export default function AdminSettingsPage() {
           </section>
 
           {/* ── 5. Danger Zone ────────────────────────────────────────────────── */}
-          <section className="border border-error/30 bg-error/5 rounded-xl p-lg">
+          <section className="border border-[#FF4D4D]/30 bg-[#FF4D4D]/5 rounded-xl p-6">
             <SectionHeading
               icon="warning"
               title="Danger Zone"
               subtitle="Irreversible client-side actions — proceed with caution"
             />
-            <div className="flex flex-col sm:flex-row gap-md">
+            <div className="flex flex-col sm:flex-row gap-4">
               <button
                 onClick={handleClearCache}
-                className="flex-1 px-md py-sm bg-error/10 hover:bg-error/20 text-error border border-error/30 rounded-xl font-label-md text-sm transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border border-[#FF4D4D]/30 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
                 Clear Local Cache
               </button>
               <button
                 onClick={handleReload}
-                className="flex-1 px-md py-sm bg-error/10 hover:bg-error/20 text-error border border-error/30 rounded-xl font-label-md text-sm transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border border-[#FF4D4D]/30 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[18px]">restart_alt</span>
                 Reload Application
               </button>
             </div>
-            <p className="text-xs text-error/60 mt-md">
+            <p className="text-[10px] text-[#FF4D4D]/60 mt-4 uppercase font-bold tracking-wider">
               These actions only affect your browser session. No database data is modified.
             </p>
           </section>
@@ -520,17 +522,17 @@ export default function AdminSettingsPage() {
       {/* Toast ────────────────────────────────────────────────────────────────── */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 p-md rounded-xl flex items-start gap-md shadow-2xl border bg-surface-container backdrop-blur-xl max-w-sm ${
-            toast.type === "success" ? "border-secondary/50 text-secondary" : "border-error/50 text-error"
+          className={`fixed bottom-6 right-6 z-50 p-4 rounded-xl flex items-start gap-4 shadow-2xl border bg-[#101412] max-w-sm ${
+            toast.type === "success" ? "border-[#00FF66]/30 text-[#00FF66]" : "border-[#FF4D4D]/30 text-[#FF4D4D]"
           }`}
         >
           <span className="material-symbols-outlined mt-0.5 flex-shrink-0">
             {toast.type === "success" ? "check_circle" : "error"}
           </span>
-          <p className="font-body-md text-on-surface text-sm flex-1">{toast.message}</p>
+          <p className="font-body-md text-[#F5F5F5] text-xs font-bold uppercase tracking-wider flex-1">{toast.message}</p>
           <button
             onClick={() => setToast(null)}
-            className="text-on-surface-variant hover:text-on-surface ml-2 flex-shrink-0"
+            className="text-[#8A938D] hover:text-[#F5F5F5] ml-2 flex-shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
@@ -540,11 +542,9 @@ export default function AdminSettingsPage() {
       {/* Global CSS */}
       <style dangerouslySetInnerHTML={{ __html: `
         .glass-card {
-          background: rgba(17, 24, 39, 0.7);
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(180, 197, 255, 0.1);
+          background: #101412;
+          border: 1px solid #1D2A22;
         }
-        .glow-cyan { text-shadow: 0 0 8px rgba(76, 215, 246, 0.5); }
       ` }} />
     </div>
   );

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import CustomCursor from "@/components/ui/CustomCursor";
 
 interface ApplicantData {
   _id: string;
@@ -108,10 +109,11 @@ export default function ApplicantSelectPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background text-[#e1e2ed] flex items-center justify-center font-body-md">
-        <div className="bg-error/10 border border-error/30 text-error rounded-xl p-5 flex items-start gap-3">
+      <div className="min-h-screen bg-[#050505] text-[#F5F5F5] flex items-center justify-center font-body-md">
+        <CustomCursor />
+        <div className="bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 text-[#FF4D4D] rounded-xl p-5 flex items-start gap-3 shadow-md">
           <span className="material-symbols-outlined mt-0.5 flex-shrink-0">error</span>
-          <p>{error}</p>
+          <p className="text-xs font-bold uppercase tracking-wider">{error}</p>
         </div>
       </div>
     );
@@ -119,66 +121,69 @@ export default function ApplicantSelectPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <CustomCursor />
+        <div className="w-8 h-8 border-2 border-[#00FF66]/30 border-t-[#00FF66] rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-[#e1e2ed] font-body-md selection:bg-primary/30 selection:text-primary flex flex-col">
-      <header className="w-full sticky top-0 z-50 border-b border-outline-variant/30 shadow-sm" style={{ background: "rgba(11,17,32,0.85)", backdropFilter: "blur(20px)" }}>
-        <div className="flex items-center justify-between px-6 h-16 max-w-5xl mx-auto">
+    <div className="min-h-screen bg-[#050505] text-[#F5F5F5] font-body-md selection:bg-[#00FF66]/30 selection:text-[#00FF66] flex flex-col">
+      <CustomCursor />
+      
+      <header className="w-full sticky top-0 z-50 border-b border-[#1D2A22] bg-[#050505]/80 backdrop-blur-xl shadow-sm">
+        <div className="flex items-center justify-between px-8 h-16 max-w-5xl mx-auto">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
-              <span className="material-symbols-outlined text-[18px]">person_search</span>
+            <div className="w-8 h-8 rounded-lg bg-[#00FF66] flex items-center justify-center text-[#050505] shadow-[0_0_12px_rgba(0,255,102,0.4)]">
+              <span className="material-symbols-outlined text-[18px] font-bold">person_search</span>
             </div>
             <div>
-              <p className="font-black text-primary text-sm tracking-tight">NEXUS</p>
-              <p className="text-[9px] text-on-surface-variant uppercase tracking-widest">Select Applicant</p>
+              <p className="font-black text-[#F5F5F5] text-sm tracking-wide uppercase">NEXUS</p>
+              <p className="text-[9px] text-[#8A938D] font-bold uppercase tracking-widest">Select Applicant</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="glass-card px-4 py-1.5 rounded-full flex items-center gap-2 border border-primary/20">
-              <span className="text-xs text-on-surface-variant uppercase">Room</span>
-              <span className="text-sm font-semibold text-primary">{roomNumber}</span>
+            <div className="bg-[#101412] px-4 py-1.5 rounded-full flex items-center gap-2 border border-[#1D2A22]">
+              <span className="text-[9px] font-bold text-[#8A938D] uppercase tracking-wider">Room</span>
+              <span className="text-sm font-black text-[#00FF66]">{roomNumber}</span>
             </div>
-            <div className="glass-card px-4 py-1.5 rounded-full flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px] text-on-surface-variant">person</span>
-              <span className="text-sm font-semibold text-on-surface">{interviewerName}</span>
+            <div className="bg-[#101412] px-4 py-1.5 rounded-full flex items-center gap-2 border border-[#1D2A22]">
+              <span className="material-symbols-outlined text-[16px] text-[#8A938D]">person</span>
+              <span className="text-xs font-bold text-[#F5F5F5]">{interviewerName}</span>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 max-w-5xl w-full mx-auto p-6 flex flex-col items-center mt-8">
+      <div className="flex-1 max-w-5xl w-full mx-auto p-8 flex flex-col items-center mt-8">
         
         {!selectedApplicant ? (
-          <div className="w-full max-w-2xl glass-card rounded-3xl p-8 md:p-12 shadow-2xl border border-outline-variant/30">
+          <div className="w-full max-w-2xl bg-[#101412] rounded-xl p-8 md:p-12 shadow-2xl border border-[#1D2A22]">
             <div className="text-center mb-10">
-              <h2 className="text-3xl font-black text-on-surface tracking-tight">Select Applicant</h2>
-              <p className="text-on-surface-variant font-body-lg mt-3">Search for a waiting candidate to begin the interview process.</p>
+              <h2 className="text-2xl font-black text-[#F5F5F5] uppercase tracking-wide">Select Applicant</h2>
+              <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider mt-3">Search for a waiting candidate to begin the interview process.</p>
             </div>
 
             <div className="w-full flex flex-col gap-3 text-left">
-              <label className="text-sm font-label-md text-on-surface-variant uppercase tracking-wider pl-1">Search Database</label>
+              <label className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest pl-1">Search Database</label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[24px]">search</span>
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#8A938D] text-[24px]">search</span>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={handleSearch}
                   placeholder="Name or Roll Number..."
-                  className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded-2xl pl-12 pr-10 py-5 text-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface placeholder:text-outline-variant/50"
+                  className="w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg pl-12 pr-10 py-4 text-sm focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none text-[#F5F5F5] placeholder:text-[#8A938D]/40"
                 />
                 {isSearching && (
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 border-2 border-[#00FF66]/30 border-t-[#00FF66] rounded-full animate-spin"></div>
                 )}
               </div>
 
               {/* Results list */}
               {searchResults.length > 0 && (
-                <ul className="max-h-72 overflow-y-auto border border-outline-variant/20 rounded-2xl bg-surface-container divide-y divide-outline-variant/10 mt-4 shadow-xl">
+                <ul className="max-h-72 overflow-y-auto border border-[#1D2A22] rounded-lg bg-[#0B0D0C] divide-y divide-[#1D2A22] mt-4 shadow-2xl custom-scrollbar">
                   {searchResults.map((a) => (
                     <li key={a._id}>
                       <button
@@ -187,18 +192,18 @@ export default function ApplicantSelectPage() {
                           setSearchQuery("");
                           setSearchResults([]);
                         }}
-                        className="w-full text-left px-6 py-5 hover:bg-primary/10 transition-colors group flex items-center justify-between"
+                        className="w-full text-left px-6 py-4 hover:bg-[#00FF66]/5 transition-colors group flex items-center justify-between"
                       >
                         <div>
-                          <p className="text-lg font-medium text-on-surface group-hover:text-primary transition-colors">{a.name}</p>
-                          <p className="text-sm text-on-surface-variant mt-1 font-mono">{a.rollNumber}</p>
+                          <p className="text-sm font-bold text-[#F5F5F5] group-hover:text-[#00FF66] transition-colors">{a.name}</p>
+                          <p className="text-xs text-[#8A938D] mt-0.5 font-mono">{a.rollNumber}</p>
                           {(a.department || a.year) && (
-                            <p className="text-xs text-outline-variant mt-2 font-label-sm uppercase tracking-wider">
+                            <p className="text-[10px] text-[#8A938D]/60 mt-1.5 font-bold uppercase tracking-wider">
                               {[a.department, a.year].filter(Boolean).join(" · ")}
                             </p>
                           )}
                         </div>
-                        <span className="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100">arrow_forward_ios</span>
+                        <span className="material-symbols-outlined text-[#8A938D] group-hover:text-[#00FF66] transition-colors text-sm font-bold">arrow_forward</span>
                       </button>
                     </li>
                   ))}
@@ -207,44 +212,44 @@ export default function ApplicantSelectPage() {
 
               {/* No results */}
               {searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && (
-                <p className="text-sm text-on-surface-variant mt-4 text-center">No waiting applicants found for &ldquo;{searchQuery}&rdquo;</p>
+                <p className="text-xs text-[#8A938D] mt-4 text-center font-semibold uppercase tracking-wider">No waiting applicants found for &ldquo;{searchQuery}&rdquo;</p>
               )}
             </div>
           </div>
         ) : (
-          <div className="w-full max-w-xl glass-card rounded-3xl p-8 md:p-12 shadow-[0_0_40px_rgba(76,215,246,0.1)] border border-primary/30 flex flex-col items-center text-center">
-            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20 mb-6 shadow-inner">
-              <span className="material-symbols-outlined text-5xl text-primary">person_check</span>
+          <div className="w-full max-w-xl bg-[#101412] rounded-xl p-8 md:p-12 shadow-2xl border border-[#00FF66]/20 flex flex-col items-center text-center">
+            <div className="w-20 h-20 bg-[#00FF66]/10 rounded-full flex items-center justify-center border border-[#00FF66]/20 mb-6 shadow-inner text-[#00FF66]">
+              <span className="material-symbols-outlined text-4xl">person_check</span>
             </div>
             
-            <h3 className="text-sm font-label-md text-on-surface-variant uppercase tracking-widest mb-2">Confirm Selection</h3>
-            <h2 className="text-4xl font-black text-on-surface mb-2">{selectedApplicant.name}</h2>
-            <p className="text-lg font-mono text-primary/80 mb-8">{selectedApplicant.rollNumber}</p>
+            <h3 className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-2">Confirm Selection</h3>
+            <h2 className="text-3xl font-black text-[#F5F5F5] mb-2 uppercase tracking-wide">{selectedApplicant.name}</h2>
+            <p className="text-lg font-mono text-[#00FF66] font-bold mb-8">{selectedApplicant.rollNumber}</p>
 
             <div className="w-full grid grid-cols-2 gap-4 mb-10 text-left">
-              <div className="bg-surface-variant/20 rounded-2xl p-4 border border-outline-variant/10">
-                <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Room</p>
-                <p className="text-lg font-semibold">{roomNumber}</p>
+              <div className="bg-[#0B0D0C]/40 rounded-lg p-4 border border-[#1D2A22]">
+                <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-widest mb-1">Room</p>
+                <p className="text-base font-bold text-[#F5F5F5]">{roomNumber}</p>
               </div>
-              <div className="bg-surface-variant/20 rounded-2xl p-4 border border-outline-variant/10">
-                <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Interviewer</p>
-                <p className="text-lg font-semibold truncate">{interviewerName}</p>
+              <div className="bg-[#0B0D0C]/40 rounded-lg p-4 border border-[#1D2A22]">
+                <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-widest mb-1">Interviewer</p>
+                <p className="text-base font-bold text-[#F5F5F5] truncate">{interviewerName}</p>
               </div>
             </div>
 
             <button
               onClick={handleStartInterview}
               disabled={isStarting}
-              className="w-full py-5 bg-primary text-on-primary hover:bg-primary/90 rounded-2xl font-label-lg text-lg transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(180,197,255,0.4)] disabled:opacity-50 disabled:shadow-none font-bold tracking-wider"
+              className="w-full py-4 bg-[#00FF66] text-[#050505] hover:bg-[#00B84A] rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(0,255,102,0.35)] disabled:opacity-50 disabled:shadow-none tracking-widest"
             >
               {isStarting ? (
                 <>
-                  <div className="w-6 h-6 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin"></div>
+                  <div className="w-5 h-5 border-2 border-[#050505]/30 border-t-[#050505] rounded-full animate-spin"></div>
                   STARTING...
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined">play_circle</span>
+                  <span className="material-symbols-outlined text-sm font-bold">play_circle</span>
                   START INTERVIEW
                 </>
               )}
@@ -253,7 +258,7 @@ export default function ApplicantSelectPage() {
             <button
               onClick={() => setSelectedApplicant(null)}
               disabled={isStarting}
-              className="mt-6 text-sm text-on-surface-variant hover:text-on-surface font-label-md transition-colors"
+              className="mt-6 text-xs text-[#8A938D] hover:text-[#00FF66] font-bold uppercase tracking-wider transition-colors"
             >
               Cancel and search again
             </button>
@@ -262,10 +267,19 @@ export default function ApplicantSelectPage() {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .glass-card {
-          background: rgba(17, 24, 39, 0.7);
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(180, 197, 255, 0.1);
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(0,0,0,0.1);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #1D2A22;
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #00FF66/30;
         }
       ` }} />
     </div>

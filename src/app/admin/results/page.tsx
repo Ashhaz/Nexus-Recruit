@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/ui/LogoutButton";
+import CustomCursor from "@/components/ui/CustomCursor";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -160,59 +161,62 @@ export default function AdminResultsPage() {
   // ── Render Helpers ──────────────────────────────────────────────────────────
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Approved": return "text-secondary bg-secondary/10";
-      case "Interviewing": return "text-primary bg-primary/10";
-      case "Discussion Needed": return "text-error bg-error/10";
-      case "Pending": return "text-warning bg-warning/10";
-      default: return "text-on-surface-variant bg-surface-variant/30"; // Waiting
+      case "Approved": return "text-[#00FF66] bg-[#00FF66]/10";
+      case "Interviewing": return "text-[#00FF66] bg-[#00FF66]/10 animate-pulse";
+      case "Discussion Needed": return "text-[#FF4D4D] bg-[#FF4D4D]/10";
+      case "Pending": return "text-[#FFB020] bg-[#FFB020]/10";
+      default: return "text-[#8A938D] bg-[#8A938D]/10"; // Waiting
     }
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-background text-[#e1e2ed] font-body-md selection:bg-primary/30 selection:text-primary">
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#050505] text-[#F5F5F5] font-body-md selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+      <CustomCursor />
 
       {/* SideNavBar */}
-      <aside className="w-64 fixed left-0 top-0 z-40 bg-surface-container backdrop-blur-md border-r border-outline-variant/20 shadow-2xl flex-col h-full py-lg hidden md:flex">
-        <div className="px-md mb-xl">
-          <div className="flex items-center gap-sm">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
-              <span className="material-symbols-outlined text-[20px]">terminal</span>
+      <aside className="w-64 fixed left-0 top-0 z-40 bg-[#0B0D0C] border-r border-[#1D2A22] shadow-2xl flex flex-col h-full py-6 hidden md:flex">
+        <div className="px-6 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#00FF66] flex items-center justify-center text-[#050505] shadow-[0_0_12px_rgba(0,255,102,0.4)]">
+              <span className="material-symbols-outlined text-[20px] font-bold">terminal</span>
             </div>
             <div>
-              <h1 className="font-headline-sm text-headline-sm font-black text-primary">NEXUS</h1>
-              <p className="text-[10px] font-label-sm tracking-widest text-on-surface-variant uppercase">Recruitment Engine</p>
+              <h1 className="text-lg font-black text-[#F5F5F5] tracking-wider">NEXUS</h1>
+              <p className="text-[9px] font-bold tracking-widest text-[#8A938D] uppercase">Recruitment Engine</p>
             </div>
           </div>
         </div>
-        <nav className="flex-1 space-y-xs px-sm overflow-y-auto">
-          <Link href="/admin/dashboard" className={`flex items-center gap-md px-md py-sm transition-all duration-300 ${pathname === '/admin/dashboard' ? 'bg-primary/10 text-primary border-r-2 border-primary shadow-[inset_0_0_12px_rgba(180,197,255,0.2)] hover:glow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 hover:translate-x-1 transition-transform'}`}>
-            <span className="material-symbols-outlined">dashboard</span>
-            <span className="font-label-md text-label-md">Dashboard</span>
+        
+        <nav className="flex-1 space-y-1.5 px-4 overflow-y-auto">
+          <Link href="/admin/dashboard" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/dashboard' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
+            <span className="material-symbols-outlined text-lg">dashboard</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Dashboard</span>
           </Link>
-          <Link href="/admin/applicants" className={`flex items-center gap-md px-md py-sm transition-all duration-300 ${pathname === '/admin/applicants' ? 'bg-primary/10 text-primary border-r-2 border-primary shadow-[inset_0_0_12px_rgba(180,197,255,0.2)] hover:glow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 hover:translate-x-1 transition-transform'}`}>
-            <span className="material-symbols-outlined">group</span>
-            <span className="font-label-md text-label-md">Applicants</span>
+          <Link href="/admin/applicants" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/applicants' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
+            <span className="material-symbols-outlined text-lg">group</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Applicants</span>
           </Link>
-          <Link href="/admin/rooms" className={`flex items-center gap-md px-md py-sm transition-all duration-300 ${pathname === '/admin/rooms' ? 'bg-primary/10 text-primary border-r-2 border-primary shadow-[inset_0_0_12px_rgba(180,197,255,0.2)] hover:glow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 hover:translate-x-1 transition-transform'}`}>
-            <span className="material-symbols-outlined">terminal</span>
-            <span className="font-label-md text-label-md">Interview Rooms</span>
+          <Link href="/admin/rooms" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/rooms' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
+            <span className="material-symbols-outlined text-lg">terminal</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Rooms</span>
           </Link>
-          <Link href="/admin/results" className={`flex items-center gap-md px-md py-sm transition-all duration-300 ${pathname === '/admin/results' ? 'bg-primary/10 text-primary border-r-2 border-primary shadow-[inset_0_0_12px_rgba(180,197,255,0.2)] hover:glow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 hover:translate-x-1 transition-transform'}`}>
-            <span className="material-symbols-outlined">assignment_turned_in</span>
-            <span className="font-label-md text-label-md">Results</span>
+          <Link href="/admin/results" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/results' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
+            <span className="material-symbols-outlined text-lg">assignment_turned_in</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Results</span>
           </Link>
-          <Link href="/admin/analytics" className={`flex items-center gap-md px-md py-sm transition-all duration-300 ${pathname === '/admin/analytics' ? 'bg-primary/10 text-primary border-r-2 border-primary shadow-[inset_0_0_12px_rgba(180,197,255,0.2)] hover:glow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 hover:translate-x-1 transition-transform'}`}>
-            <span className="material-symbols-outlined">analytics</span>
-            <span className="font-label-md text-label-md">Analytics</span>
+          <Link href="/admin/analytics" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/analytics' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
+            <span className="material-symbols-outlined text-lg">analytics</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Analytics</span>
           </Link>
-          <Link href="/admin/settings" className={`flex items-center gap-md px-md py-sm transition-all duration-300 ${pathname === '/admin/settings' ? 'bg-primary/10 text-primary border-r-2 border-primary shadow-[inset_0_0_12px_rgba(180,197,255,0.2)] hover:glow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30 hover:translate-x-1 transition-transform'}`}>
-            <span className="material-symbols-outlined">settings</span>
-            <span className="font-label-md text-label-md">Settings</span>
+          <Link href="/admin/settings" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/settings' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
+            <span className="material-symbols-outlined text-lg">settings</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Settings</span>
           </Link>
         </nav>
-        <div className="px-sm mt-auto">
-          <div className="space-y-xs">
+
+        <div className="px-4 mt-auto">
+          <div className="space-y-1">
             <LogoutButton />
           </div>
         </div>
@@ -221,33 +225,33 @@ export default function AdminResultsPage() {
       {/* Main Content Area */}
       <main className="md:ml-64 flex-1 min-h-screen flex flex-col relative">
         {/* TopNavBar */}
-        <header className="w-full sticky top-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/30 shadow-sm">
-          <div className="flex items-center justify-between px-gutter h-16 w-full max-w-container-max mx-auto">
+        <header className="w-full sticky top-0 z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-[#1D2A22] shadow-sm">
+          <div className="flex items-center justify-between px-8 h-16 w-full max-w-container-max mx-auto">
             <div className="flex items-center gap-xl">
-              <span className="font-headline-md text-headline-md font-bold tracking-tighter text-primary drop-shadow-[0_0_8px_rgba(180,197,255,0.5)] md:hidden">NEXUS</span>
+              <span className="text-xl font-black text-[#00FF66] drop-shadow-[0_0_8px_rgba(0,255,102,0.4)] md:hidden">NEXUS</span>
               <div className="hidden lg:flex items-center gap-lg">
                 <div className="relative group neon-border-focus">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8A938D] text-[20px]">search</span>
                   <input 
-                    className="bg-surface-variant/30 border border-outline-variant/30 rounded-full pl-10 pr-4 py-1.5 text-body-sm w-64 focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface placeholder:text-outline-variant" 
+                    className="bg-[#0B0D0C] border border-[#1D2A22] rounded-full pl-10 pr-4 py-1.5 text-xs w-64 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none text-[#F5F5F5] placeholder:text-[#8A938D]" 
                     placeholder="Global search..." 
                     type="text" 
                   />
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-md">
-              <button className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-full transition-all active:scale-95">
+            <div className="flex items-center gap-4">
+              <button className="p-2 text-[#8A938D] hover:text-[#00FF66] hover:bg-[#00FF66]/10 rounded-full transition-all">
                 <span className="material-symbols-outlined">notifications</span>
               </button>
-              <div className="h-8 w-[1px] bg-outline-variant/30 mx-1"></div>
-              <div className="flex items-center gap-sm cursor-pointer group">
+              <div className="h-6 w-[1px] bg-[#1D2A22] mx-1"></div>
+              <div className="flex items-center gap-3 cursor-pointer group">
                 <div className="text-right hidden sm:block">
-                  <p className="font-label-md text-label-md text-on-surface">System Admin</p>
-                  <p className="text-[10px] text-on-surface-variant">Active</p>
+                  <p className="text-xs font-bold text-[#F5F5F5]">System Admin</p>
+                  <p className="text-[10px] text-[#8A938D]">Active</p>
                 </div>
-                <div className="w-10 h-10 rounded-full border-2 border-primary/20 group-hover:border-primary transition-colors bg-primary/20 flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[20px]">shield_person</span>
+                <div className="w-9 h-9 rounded-full border border-[#1D2A22] group-hover:border-[#00FF66] transition-colors bg-[#0B0D0C] flex items-center justify-center text-[#00FF66]">
+                  <span className="material-symbols-outlined text-[18px]">shield_person</span>
                 </div>
               </div>
             </div>
@@ -255,19 +259,19 @@ export default function AdminResultsPage() {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 p-lg max-w-7xl mx-auto w-full flex flex-col gap-lg overflow-x-hidden pt-8">
+        <div className="flex-1 p-8 max-w-7xl mx-auto w-full flex flex-col gap-6 overflow-x-hidden pt-8">
 
           {/* Header & Actions */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-2">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <h2 className="font-headline-lg text-headline-lg text-primary glow-cyan">Results Module</h2>
-              <p className="text-on-surface-variant font-body-md text-body-md mt-sm">Comprehensive list of all applicants and their interview results.</p>
+              <h2 className="text-2xl font-black tracking-wide text-[#F5F5F5] uppercase">Results Registry</h2>
+              <p className="text-[#8A938D] text-xs font-semibold uppercase tracking-wider mt-1">Comprehensive list of all applicants and their interview results.</p>
             </div>
             <div className="flex items-center gap-3">
               <button 
                 onClick={handleExportCSV}
                 disabled={loading || filteredData.length === 0}
-                className="px-md py-sm bg-surface-variant/30 hover:bg-surface-variant/50 text-on-surface border border-outline-variant/30 rounded-xl font-label-md text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 bg-[#0B0D0C] hover:bg-[#00FF66] hover:text-[#050505] text-[#F5F5F5] border border-[#1D2A22] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
               >
                 <span className="material-symbols-outlined text-[18px]">download</span>
                 Export CSV
@@ -277,92 +281,92 @@ export default function AdminResultsPage() {
 
           {/* Error State */}
           {error && (
-            <div className="bg-error/10 border border-error/20 text-error p-4 rounded-xl flex items-center gap-3">
+            <div className="bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 text-[#FF4D4D] p-4 rounded-xl flex items-center gap-3">
               <span className="material-symbols-outlined">error</span>
-              <p>{error}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider">{error}</p>
             </div>
           )}
 
           {/* Filters & Search */}
-          <div className="glass-card p-md rounded-xl flex flex-col md:flex-row gap-4 items-end">
+          <div className="bg-[#101412] border border-[#1D2A22] p-6 rounded-xl flex flex-col md:flex-row gap-4 items-end shadow-xl">
             <div className="flex-1 w-full">
-              <label className="text-xs font-label-sm text-on-surface-variant uppercase tracking-wider mb-2 block">Search</label>
+              <label className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-2 block">Search</label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8A938D] text-[20px]">search</span>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search Name or Roll Number..."
-                  className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface placeholder:text-outline-variant"
+                  className="w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg pl-10 pr-4 py-2 text-xs focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none text-[#F5F5F5] placeholder:text-[#8A938D]/60"
                 />
               </div>
             </div>
             <div className="w-full md:w-48">
-              <label className="text-xs font-label-sm text-on-surface-variant uppercase tracking-wider mb-2 block">Status</label>
+              <label className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-2 block">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface appearance-none"
+                className="w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg px-4 py-2 text-xs focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none text-[#F5F5F5] appearance-none"
               >
-                {uniqueStatuses.map(s => <option key={s} value={s} className="bg-surface-container">{s}</option>)}
+                {uniqueStatuses.map(s => <option key={s} value={s} className="bg-[#0B0D0C]">{s}</option>)}
               </select>
             </div>
             <div className="w-full md:w-48">
-              <label className="text-xs font-label-sm text-on-surface-variant uppercase tracking-wider mb-2 block">Department</label>
+              <label className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-2 block">Department</label>
               <select
                 value={departmentFilter}
                 onChange={(e) => setDepartmentFilter(e.target.value)}
-                className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface appearance-none"
+                className="w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg px-4 py-2 text-xs focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none text-[#F5F5F5] appearance-none"
               >
-                {uniqueDepartments.map(d => <option key={d} value={d} className="bg-surface-container">{d}</option>)}
+                {uniqueDepartments.map(d => <option key={d} value={d} className="bg-[#0B0D0C]">{d}</option>)}
               </select>
             </div>
             <div className="w-full md:w-48">
-              <label className="text-xs font-label-sm text-on-surface-variant uppercase tracking-wider mb-2 block">Interviewer</label>
+              <label className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-2 block">Interviewer</label>
               <select
                 value={interviewerFilter}
                 onChange={(e) => setInterviewerFilter(e.target.value)}
-                className="w-full bg-surface-variant/30 border border-outline-variant/30 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface appearance-none"
+                className="w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg px-4 py-2 text-xs focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none text-[#F5F5F5] appearance-none"
               >
-                {uniqueInterviewers.map(i => <option key={i} value={i} className="bg-surface-container">{i}</option>)}
+                {uniqueInterviewers.map(i => <option key={i} value={i} className="bg-[#0B0D0C]">{i}</option>)}
               </select>
             </div>
           </div>
 
           {/* Data Table */}
-          <div className="glass-card rounded-xl border border-outline-variant/30 overflow-hidden flex-1 flex flex-col min-h-[400px]">
+          <div className="bg-[#101412] rounded-xl border border-[#1D2A22] overflow-hidden flex-1 flex flex-col min-h-[400px] shadow-2xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-surface-variant/20 border-b border-outline-variant/30">
-                    <th className="px-4 py-3 text-xs font-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Applicant</th>
-                    <th className="px-4 py-3 text-xs font-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Department</th>
-                    <th className="px-4 py-3 text-xs font-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Room &amp; Interviewer</th>
-                    <th className="px-4 py-3 text-xs font-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Status</th>
-                    <th className="px-4 py-3 text-xs font-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Decision</th>
-                    <th className="px-4 py-3 text-xs font-label-sm text-on-surface-variant uppercase tracking-wider font-semibold text-right">Updated</th>
+                  <tr className="bg-[#0B0D0C] border-b border-[#1D2A22]">
+                    <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Applicant</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Department</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Room &amp; Interviewer</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Status</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Decision</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest text-right">Updated</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-outline-variant/10">
+                <tbody className="divide-y divide-[#1D2A22]/50">
                   {loading ? (
                     // Loading Skeleton
                     Array.from({ length: 5 }).map((_, i) => (
                       <tr key={i} className="animate-pulse">
-                        <td className="px-4 py-4"><div className="h-4 bg-surface-variant/40 rounded w-3/4 mb-1"></div><div className="h-3 bg-surface-variant/20 rounded w-1/2"></div></td>
-                        <td className="px-4 py-4"><div className="h-4 bg-surface-variant/30 rounded w-full"></div></td>
-                        <td className="px-4 py-4"><div className="h-4 bg-surface-variant/30 rounded w-2/3 mb-1"></div><div className="h-3 bg-surface-variant/20 rounded w-1/2"></div></td>
-                        <td className="px-4 py-4"><div className="h-6 bg-surface-variant/30 rounded-full w-24"></div></td>
-                        <td className="px-4 py-4"><div className="h-4 bg-surface-variant/30 rounded w-1/2"></div></td>
-                        <td className="px-4 py-4 text-right"><div className="h-4 bg-surface-variant/30 rounded w-full ml-auto"></div></td>
+                        <td className="px-6 py-4"><div className="h-4 bg-[#0B0D0C] rounded w-3/4 mb-1"></div><div className="h-3 bg-[#0B0D0C] rounded w-1/2"></div></td>
+                        <td className="px-6 py-4"><div className="h-4 bg-[#0B0D0C] rounded w-full"></div></td>
+                        <td className="px-6 py-4"><div className="h-4 bg-[#0B0D0C] rounded w-2/3 mb-1"></div><div className="h-3 bg-[#0B0D0C] rounded w-1/2"></div></td>
+                        <td className="px-6 py-4"><div className="h-6 bg-[#0B0D0C] rounded-full w-24"></div></td>
+                        <td className="px-6 py-4"><div className="h-4 bg-[#0B0D0C] rounded w-1/2"></div></td>
+                        <td className="px-6 py-4 text-right"><div className="h-4 bg-[#0B0D0C] rounded w-full ml-auto"></div></td>
                       </tr>
                     ))
                   ) : filteredData.length === 0 ? (
                     // Empty State
                     <tr>
-                      <td colSpan={6} className="px-4 py-16 text-center text-on-surface-variant">
-                        <span className="material-symbols-outlined text-4xl mb-2 opacity-50">search_off</span>
-                        <p>No applicants found matching the criteria.</p>
+                      <td colSpan={6} className="px-6 py-16 text-center text-[#8A938D]">
+                        <span className="material-symbols-outlined text-4xl mb-2 text-[#8A938D]/40">search_off</span>
+                        <p className="text-xs font-bold uppercase tracking-wider">No applicants found matching the criteria</p>
                       </td>
                     </tr>
                   ) : (
@@ -370,34 +374,34 @@ export default function AdminResultsPage() {
                     filteredData.map(a => (
                       <tr 
                         key={a._id} 
-                        className="hover:bg-primary/5 transition-colors cursor-pointer group"
+                        className="hover:bg-[#00FF66]/5 transition-colors cursor-pointer group"
                         onClick={() => {
                           console.log("Setting selected applicant:", a);
                           setSelectedApplicant(a);
                         }}
                       >
-                        <td className="px-4 py-3">
-                          <p className="text-sm font-medium text-on-surface group-hover:text-primary transition-colors">{a.name}</p>
-                          <p className="text-xs text-on-surface-variant">{a.rollNumber}</p>
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-bold text-[#F5F5F5] group-hover:text-[#00FF66] transition-colors">{a.name}</p>
+                          <p className="text-xs text-[#8A938D] font-mono mt-0.5">{a.rollNumber}</p>
                         </td>
-                        <td className="px-4 py-3">
-                          <p className="text-sm text-on-surface">{a.department || "—"}</p>
-                          {a.teamApplied && <p className="text-xs text-on-surface-variant">{a.teamApplied}</p>}
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-[#F5F5F5]">{a.department || "—"}</p>
+                          {a.teamApplied && <p className="text-xs text-[#8A938D] mt-0.5">{a.teamApplied}</p>}
                         </td>
-                        <td className="px-4 py-3">
-                          <p className="text-sm text-on-surface">{a.assignedRoom ? `Room ${a.assignedRoom}` : "—"}</p>
-                          <p className="text-xs text-on-surface-variant">{a.assignedInterviewer || "—"}</p>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-[#F5F5F5]">{a.assignedRoom ? `Room ${String(a.assignedRoom).padStart(2, "0")}` : "—"}</p>
+                          <p className="text-xs text-[#8A938D] mt-0.5">{a.assignedInterviewer || "—"}</p>
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-label-sm uppercase tracking-wider ${getStatusColor(a.interviewStatus || "Waiting")}`}>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(a.interviewStatus || "Waiting")}`}>
                             {a.interviewStatus || "Waiting"}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
-                          <p className="text-sm font-medium text-on-surface">{a.finalDecision || "—"}</p>
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-semibold text-[#F5F5F5]">{a.finalDecision || "—"}</p>
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <p className="text-xs text-on-surface-variant">{new Date(a.updatedAt).toLocaleDateString()}</p>
+                        <td className="px-6 py-4 text-right">
+                          <p className="text-xs text-[#8A938D] font-mono">{new Date(a.updatedAt).toLocaleDateString()}</p>
                         </td>
                       </tr>
                     ))
@@ -415,7 +419,7 @@ export default function AdminResultsPage() {
         <>  
           {/* Overlay */}
           <div
-            style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+            style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
             onClick={() => setSelectedApplicant(null)}
             aria-label="Close drawer"
           />
@@ -426,55 +430,56 @@ export default function AdminResultsPage() {
               top: 0,
               right: 0,
               zIndex: 101,
-              width: "min(42vw, 560px)",
+              width: "min(45vw, 560px)",
               height: "100vh",
-              background: "#111827",
-              borderLeft: "1px solid rgba(180,197,255,0.15)",
-              boxShadow: "-8px 0 32px rgba(0,0,0,0.6)",
+              background: "#0B0D0C",
+              borderLeft: "1px solid #1D2A22",
+              boxShadow: "-8px 0 32px rgba(0,0,0,0.8)",
               display: "flex",
               flexDirection: "column",
               overflow: "hidden",
             }}
           >
             {/* ── Drawer Header ── */}
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid rgba(180,197,255,0.1)", flexShrink: 0, background: "rgba(17,24,39,0.95)" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid #1D2A22", flexShrink: 0, background: "#0B0D0C" }}>
               <div>
-                <h3 style={{ fontSize: "1.125rem", fontWeight: 700, color: "#e1e2ed", margin: 0, lineHeight: 1.3 }}>{selectedApplicant.name}</h3>
-                <p style={{ fontSize: "0.8rem", color: "#9aa0b4", margin: "2px 0 0 0" }}>{selectedApplicant.rollNumber}</p>
+                <h3 style={{ fontSize: "1.125rem", fontWeight: 900, color: "#F5F5F5", margin: 0, lineHeight: 1.3, textTransform: "uppercase", letterSpacing: "0.05em" }}>{selectedApplicant.name}</h3>
+                <p style={{ fontSize: "0.8rem", fontFamily: "monospace", color: "#8A938D", margin: "4px 0 0 0" }}>{selectedApplicant.rollNumber}</p>
               </div>
               <button
                 onClick={() => setSelectedApplicant(null)}
-                style={{ padding: "6px", borderRadius: "50%", border: "none", background: "transparent", color: "#9aa0b4", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ padding: "6px", borderRadius: "50%", border: "none", background: "transparent", color: "#8A938D", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                 title="Close"
+                className="hover:text-[#00FF66] transition-colors"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>close</span>
               </button>
             </div>
 
             {/* ── Drawer Body ── */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "24px", display: "flex", flexDirection: "column", gap: "28px" }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }} className="custom-scrollbar">
               
               {/* ── Status + Decision cards ── */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div style={{ background: "rgba(17,24,39,0.8)", border: "1px solid rgba(180,197,255,0.1)", borderRadius: "12px", padding: "14px" }}>
-                  <p style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#9aa0b4", marginBottom: "6px" }}>Status</p>
-                  <span className={`px-2 py-0.5 rounded-full text-xs uppercase tracking-wider ${getStatusColor(selectedApplicant.interviewStatus || "Waiting")}`}>
+                <div style={{ background: "#101412", border: "1px solid #1D2A22", borderRadius: "12px", padding: "14px" }}>
+                  <p style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A938D", fontWeight: 900, marginBottom: "8px" }}>Status</p>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(selectedApplicant.interviewStatus || "Waiting")}`}>
                     {selectedApplicant.interviewStatus || "Waiting"}
                   </span>
                 </div>
-                <div style={{ background: "rgba(17,24,39,0.8)", border: "1px solid rgba(180,197,255,0.15)", borderTop: "2px solid #b4c5ff", borderRadius: "12px", padding: "14px" }}>
-                  <p style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#9aa0b4", marginBottom: "6px" }}>Final Decision</p>
-                  <p style={{ fontSize: "1rem", fontWeight: 700, color: "#e1e2ed" }}>{selectedApplicant.finalDecision || "—"}</p>
+                <div style={{ background: "#101412", border: "1px solid #1D2A22", borderTop: "2px solid #00FF66", borderRadius: "12px", padding: "14px" }}>
+                  <p style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A938D", fontWeight: 900, marginBottom: "8px" }}>Final Decision</p>
+                  <p style={{ fontSize: "1rem", fontWeight: 900, color: "#F5F5F5" }}>{selectedApplicant.finalDecision || "—"}</p>
                 </div>
               </div>
 
               {/* ── Profile fields ── */}
               <div>
-                <h4 style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#b4c5ff", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
                   <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>person</span>
-                  Profile
+                  Profile Information
                 </h4>
-                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(180,197,255,0.08)", borderRadius: "12px", padding: "16px", display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: "14px", columnGap: "20px" }}>
+                <div style={{ background: "#101412", border: "1px solid #1D2A22", borderRadius: "12px", padding: "16px", display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: "14px", columnGap: "20px" }}>
                   {[
                     { label: "Department", value: selectedApplicant.department },
                     { label: "Branch", value: selectedApplicant.branch },
@@ -484,8 +489,8 @@ export default function AdminResultsPage() {
                     { label: "Phone", value: selectedApplicant.phone },
                   ].map(({ label, value }) => (
                     <div key={label}>
-                      <p style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#9aa0b4", marginBottom: "3px" }}>{label}</p>
-                      <p style={{ fontSize: "13px", color: value ? "#e1e2ed" : "#4a5060" }}>{value || "—"}</p>
+                      <p style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A938D", fontWeight: 900, marginBottom: "3px" }}>{label}</p>
+                      <p style={{ fontSize: "13px", color: value ? "#F5F5F5" : "#8A938D" }}>{value || "—"}</p>
                     </div>
                   ))}
                 </div>
@@ -493,19 +498,19 @@ export default function AdminResultsPage() {
 
               {/* ── Interview Details ── */}
               <div>
-                <h4 style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#b4c5ff", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
                   <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>admin_panel_settings</span>
-                  Interview Details
+                  Telemetry &amp; Interview Details
                 </h4>
-                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(180,197,255,0.08)", borderRadius: "12px", padding: "16px", display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: "14px", columnGap: "20px" }}>
+                <div style={{ background: "#101412", border: "1px solid #1D2A22", borderRadius: "12px", padding: "16px", display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: "14px", columnGap: "20px" }}>
                   {[
-                    { label: "Assigned Room", value: selectedApplicant.assignedRoom ? `Room ${selectedApplicant.assignedRoom}` : null },
+                    { label: "Assigned Room", value: selectedApplicant.assignedRoom ? `Room ${String(selectedApplicant.assignedRoom).padStart(2, "0")}` : null },
                     { label: "Interviewer", value: selectedApplicant.assignedInterviewer },
                     { label: "Duration", value: selectedApplicant.interviewDuration ? `${Math.floor(selectedApplicant.interviewDuration / 60)}m ${selectedApplicant.interviewDuration % 60}s` : null },
                   ].map(({ label, value }) => (
                     <div key={label}>
-                      <p style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#9aa0b4", marginBottom: "3px" }}>{label}</p>
-                      <p style={{ fontSize: "13px", color: value ? "#e1e2ed" : "#4a5060" }}>{value || "—"}</p>
+                      <p style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A938D", fontWeight: 900, marginBottom: "3px" }}>{label}</p>
+                      <p style={{ fontSize: "13px", color: value ? "#F5F5F5" : "#8A938D" }}>{value || "—"}</p>
                     </div>
                   ))}
                 </div>
@@ -514,19 +519,19 @@ export default function AdminResultsPage() {
               {/* ── Ratings ── */}
               {selectedApplicant.interview?.ratings && Object.keys(selectedApplicant.interview.ratings).length > 0 && (
                 <div>
-                  <h4 style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9aa0b4", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
                     <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>star</span>
-                    Ratings
+                    Evaluation Metrics
                   </h4>
-                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(180,197,255,0.08)", borderRadius: "12px", padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div style={{ background: "#101412", border: "1px solid #1D2A22", borderRadius: "12px", padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
                     {Object.entries(selectedApplicant.interview.ratings).map(([key, val]) => (
                       <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: "13px", color: "#e1e2ed", textTransform: "capitalize" }}>{key}</span>
+                        <span style={{ fontSize: "13px", color: "#F5F5F5", textTransform: "capitalize", flex: 1 }}>{key}</span>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <div style={{ width: "100px", height: "6px", background: "rgba(255,255,255,0.1)", borderRadius: "999px", overflow: "hidden" }}>
-                            <div style={{ height: "100%", background: "#4cd7f6", borderRadius: "999px", width: `${(val / 10) * 100}%` }} />
+                          <div style={{ width: "100px", height: "6px", background: "#0B0D0C", borderRadius: "999px", overflow: "hidden" }}>
+                            <div style={{ height: "100%", background: "#00FF66", borderRadius: "999px", width: `${(val / 5) * 100}%`, boxShadow: "0 0 8px rgba(0, 255, 102, 0.4)" }} />
                           </div>
-                          <span style={{ fontSize: "12px", fontFamily: "monospace", color: "#9aa0b4", minWidth: "16px", textAlign: "right" }}>{val}</span>
+                          <span style={{ fontSize: "12px", fontFamily: "monospace", color: "#00FF66", minWidth: "16px", textAlign: "right", fontWeight: "bold" }}>{val}</span>
                         </div>
                       </div>
                     ))}
@@ -537,12 +542,12 @@ export default function AdminResultsPage() {
               {/* ── Interview Notes ── */}
               {(selectedApplicant.interviewNotes || selectedApplicant.interview?.notes) && (
                 <div>
-                  <h4 style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#b4c5ff", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
                     <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>edit_note</span>
-                    Interview Notes
+                    Interview Log Notes
                   </h4>
-                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(180,197,255,0.08)", borderRadius: "12px", padding: "16px" }}>
-                    <p style={{ fontSize: "13px", color: "#e1e2ed", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                  <div style={{ background: "#101412", border: "1px solid #1D2A22", borderRadius: "12px", padding: "16px" }}>
+                    <p style={{ fontSize: "13px", color: "#F5F5F5", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
                       {selectedApplicant.interviewNotes || selectedApplicant.interview?.notes}
                     </p>
                   </div>
@@ -552,15 +557,15 @@ export default function AdminResultsPage() {
               {/* ── Google Form Responses ── */}
               {selectedApplicant.responses && Object.keys(selectedApplicant.responses).length > 0 && (
                 <div>
-                  <h4 style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9aa0b4", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
                     <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>feed</span>
-                    Google Form Responses
+                    Application Form Responses
                   </h4>
                   <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                     {Object.entries(selectedApplicant.responses).map(([question, answer], idx) => (
-                      <div key={idx} style={{ borderLeft: "2px solid rgba(180,197,255,0.25)", paddingLeft: "14px" }}>
-                        <p style={{ fontSize: "11px", color: "#9aa0b4", marginBottom: "3px" }}>{question}</p>
-                        <p style={{ fontSize: "13px", color: "#e1e2ed", lineHeight: 1.6 }}>{answer || "—"}</p>
+                      <div key={idx} style={{ borderLeft: "2px solid #00FF66", paddingLeft: "14px" }}>
+                        <p style={{ fontSize: "11px", color: "#8A938D", marginBottom: "3px", fontWeight: 600 }}>{question}</p>
+                        <p style={{ fontSize: "13px", color: "#F5F5F5", lineHeight: 1.6 }}>{answer || "—"}</p>
                       </div>
                     ))}
                   </div>
@@ -569,28 +574,28 @@ export default function AdminResultsPage() {
 
               {/* ── Timeline ── */}
               <div>
-                <h4 style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9aa0b4", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
                   <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>schedule</span>
-                  Timeline
+                  Activity Timeline
                 </h4>
-                <div style={{ borderLeft: "2px solid rgba(255,255,255,0.1)", paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "14px", paddingBottom: "8px" }}>
+                <div style={{ borderLeft: "2px solid #1D2A22", paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "14px", paddingBottom: "8px" }}>
                   <div style={{ position: "relative" }}>
-                    <div style={{ position: "absolute", left: "-25px", top: "4px", width: "10px", height: "10px", borderRadius: "50%", background: "#b4c5ff", boxShadow: "0 0 0 3px #111827" }} />
-                    <p style={{ fontSize: "13px", color: "#e1e2ed" }}>Application Received</p>
-                    <p style={{ fontSize: "11px", color: "#9aa0b4" }}>{new Date(selectedApplicant.createdAt || selectedApplicant.updatedAt).toLocaleString()}</p>
+                    <div style={{ position: "absolute", left: "-24px", top: "4px", width: "8px", height: "8px", borderRadius: "50%", background: "#8A938D", boxShadow: "0 0 0 3px #0B0D0C" }} />
+                    <p style={{ fontSize: "13px", color: "#F5F5F5" }}>Application Received</p>
+                    <p style={{ fontSize: "11px", color: "#8A938D", fontFamily: "monospace" }}>{new Date(selectedApplicant.createdAt || selectedApplicant.updatedAt).toLocaleString()}</p>
                   </div>
                   {selectedApplicant.interviewStatus !== "Waiting" && (
                     <div style={{ position: "relative" }}>
-                      <div style={{ position: "absolute", left: "-25px", top: "4px", width: "10px", height: "10px", borderRadius: "50%", background: "#4cd7f6", boxShadow: "0 0 0 3px #111827" }} />
-                      <p style={{ fontSize: "13px", color: "#e1e2ed" }}>Interview Started</p>
-                      <p style={{ fontSize: "11px", color: "#9aa0b4" }}>{selectedApplicant.interview?.startTime ? new Date(selectedApplicant.interview.startTime).toLocaleString() : "—"}</p>
+                      <div style={{ position: "absolute", left: "-24px", top: "4px", width: "8px", height: "8px", borderRadius: "50%", background: "#00FF66", boxShadow: "0 0 0 3px #0B0D0C" }} />
+                      <p style={{ fontSize: "13px", color: "#F5F5F5" }}>Interview Started</p>
+                      <p style={{ fontSize: "11px", color: "#8A938D", fontFamily: "monospace" }}>{selectedApplicant.interview?.startTime ? new Date(selectedApplicant.interview.startTime).toLocaleString() : "—"}</p>
                     </div>
                   )}
                   {["Approved", "Pending", "Discussion Needed"].includes(selectedApplicant.interviewStatus) && (
                     <div style={{ position: "relative" }}>
-                      <div style={{ position: "absolute", left: "-25px", top: "4px", width: "10px", height: "10px", borderRadius: "50%", background: "#e1e2ed", boxShadow: "0 0 0 3px #111827" }} />
-                      <p style={{ fontSize: "13px", color: "#e1e2ed" }}>Interview Completed</p>
-                      <p style={{ fontSize: "11px", color: "#9aa0b4" }}>{selectedApplicant.interview?.endTime ? new Date(selectedApplicant.interview.endTime).toLocaleString() : "—"}</p>
+                      <div style={{ position: "absolute", left: "-24px", top: "4px", width: "8px", height: "8px", borderRadius: "50%", background: "#00FF66", boxShadow: "0 0 0 3px #0B0D0C" }} />
+                      <p style={{ fontSize: "13px", color: "#F5F5F5" }}>Interview Completed</p>
+                      <p style={{ fontSize: "11px", color: "#8A938D", fontFamily: "monospace" }}>{selectedApplicant.interview?.endTime ? new Date(selectedApplicant.interview.endTime).toLocaleString() : "—"}</p>
                     </div>
                   )}
                 </div>
@@ -603,19 +608,26 @@ export default function AdminResultsPage() {
 
       {/* Global CSS */}
       <style dangerouslySetInnerHTML={{__html: `
-        .glass-card {
-            background: rgba(17, 24, 39, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(180, 197, 255, 0.1);
-        }
         .neon-border-focus:focus-within {
-            border-color: #b4c5ff;
-            box-shadow: 0 0 15px rgba(180, 197, 255, 0.3);
+            border-color: #00FF66;
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.2);
         }
-        .glow-cyan {
-            text-shadow: 0 0 8px rgba(76, 215, 246, 0.5);
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(0,0,0,0.1);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #1D2A22;
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #00FF66/30;
         }
       `}} />
     </div>
   );
 }
+
