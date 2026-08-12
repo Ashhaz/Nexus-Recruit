@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
+import Applicant from "@/models/Applicant"; // must be imported so mongoose.models["Applicant"] is registered before .populate() resolves the ref
 
 // Auto-seed rooms 1-3 if they do not exist yet.
 async function seedRooms() {

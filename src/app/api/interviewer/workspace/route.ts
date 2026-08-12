@@ -31,7 +31,8 @@ export async function GET(request: Request) {
         success: true,
         room: {
           roomNumber: room.roomNumber,
-          interviewer: room.interviewer,
+          interviewerId: room.interviewerId ?? "",
+          interviewer: room.interviewer ?? "",
           status: room.status,
           startedAt: room.startedAt ?? null,
           pausedAt: room.pausedAt ?? null,
@@ -53,7 +54,8 @@ export async function GET(request: Request) {
       success: true,
       room: {
         roomNumber: room.roomNumber,
-        interviewer: room.interviewer,
+        interviewerId: room.interviewerId ?? "",
+        interviewer: room.interviewer ?? "",
         status: room.status,
         startedAt: room.startedAt ?? null,
         pausedAt: room.pausedAt ?? null,

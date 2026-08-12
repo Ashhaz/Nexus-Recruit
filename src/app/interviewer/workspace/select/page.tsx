@@ -12,6 +12,16 @@ interface ApplicantData {
   year?: string;
 }
 
+interface RoomData {
+  roomNumber: number;
+  interviewerId: string;
+  interviewer: string;
+  status: string;
+  startedAt: string | null;
+  pausedAt: string | null;
+  accumulatedTime: number;
+}
+
 export default function ApplicantSelectPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -19,6 +29,7 @@ export default function ApplicantSelectPage() {
   const roomNumber = roomNumberStr ? Number(roomNumberStr) : null;
 
   const [interviewerName, setInterviewerName] = useState<string>("");
+  const [interviewerId, setInterviewerId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -42,17 +53,13 @@ export default function ApplicantSelectPage() {
       return;
     }
     try {
-      const [resRoom, resAuth] = await Promise.all([
-        fetch(`/api/interviewer/workspace?room=${roomNumber}`),
-        fetch(`/api/auth/me`)
-      ]);
+      const resRoom = await fetch(`/api/interviewer/workspace?room=${roomNumber}`);
       const jsonRoom = await resRoom.json();
-      const jsonAuth = await resAuth.json();
-      
       if (!jsonRoom.success) throw new Error(jsonRoom.error || "Failed to load room");
-      if (!jsonAuth.success) throw new Error(jsonAuth.error || "Failed to authenticate session");
-      
-      setInterviewerName(jsonAuth.user.name);
+
+      // Physical identity always comes from the registered room document
+      setInterviewerName(jsonRoom.room.interviewer ?? "");
+      setInterviewerId(jsonRoom.room.interviewerId ?? "");
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -100,7 +107,12 @@ export default function ApplicantSelectPage() {
       const res = await fetch("/api/interviewer/workspace/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomNumber, applicantId: selectedApplicant._id }),
+        body: JSON.stringify({
+          roomNumber,
+          applicantId: selectedApplicant._id,
+          interviewerId,
+          interviewerName,
+        }),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Failed to start interview");
@@ -117,16 +129,13 @@ export default function ApplicantSelectPage() {
     setLeaving(true);
     setLeaveError("");
     try {
-      const savedId = localStorage.getItem("nexus_interviewer_id") || "";
-      const savedName = localStorage.getItem("nexus_interviewer_name") || "";
-
       const res = await fetch("/api/interviewer/workspace/leave", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           roomNumber,
-          interviewerId: savedId,
-          interviewerName: savedName,
+          interviewerId,
+          interviewerName,
         }),
       });
       const json = await res.json();
