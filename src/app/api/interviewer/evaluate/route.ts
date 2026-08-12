@@ -77,7 +77,10 @@ export async function POST(request: Request) {
           status:      "Available",
           applicant:   null,
           interviewer: "",
+          interviewerId: "",
           startedAt:   null,
+          pausedAt:    null,
+          accumulatedTime: 0,
         },
       }
     );

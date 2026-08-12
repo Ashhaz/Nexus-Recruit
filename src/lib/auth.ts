@@ -22,17 +22,11 @@ export async function getAuthSession(): Promise<AuthSession> {
     return { role: "admin", email, name: "Admin", interviewerId: null };
   }
 
-  if (email === process.env.INTERVIEWER_1_ID) {
-    return { role: "interviewer", email, name: process.env.INTERVIEWER_1_NAME || "Interviewer 1", interviewerId: "INT1" };
-  }
-
-  if (email === process.env.INTERVIEWER_2_ID) {
-    return { role: "interviewer", email, name: process.env.INTERVIEWER_2_NAME || "Interviewer 2", interviewerId: "INT2" };
-  }
-
-  if (email === process.env.INTERVIEWER_3_ID) {
-    return { role: "interviewer", email, name: process.env.INTERVIEWER_3_NAME || "Interviewer 3", interviewerId: "INT3" };
-  }
-
-  return { role: "unauthorized", email, name: user.firstName || "Unknown", interviewerId: null };
+  // Any authenticated Clerk user who is not the admin has role "interviewer"
+  return {
+    role: "interviewer",
+    email,
+    name: user.firstName || "Shared Interviewer",
+    interviewerId: null
+  };
 }

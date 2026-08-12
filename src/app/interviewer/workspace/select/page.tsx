@@ -30,6 +30,11 @@ export default function ApplicantSelectPage() {
   const [isStarting, setIsStarting] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Leave room state
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState("");
+
   const fetchRoomData = useCallback(async () => {
     if (!roomNumber) {
       setError("No room number provided. Add ?room=X to the URL.");
@@ -107,6 +112,35 @@ export default function ApplicantSelectPage() {
     }
   };
 
+  const handleLeaveRoom = async () => {
+    if (!roomNumber) return;
+    setLeaving(true);
+    setLeaveError("");
+    try {
+      const savedId = localStorage.getItem("nexus_interviewer_id") || "";
+      const savedName = localStorage.getItem("nexus_interviewer_name") || "";
+
+      const res = await fetch("/api/interviewer/workspace/leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomNumber,
+          interviewerId: savedId,
+          interviewerName: savedName,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Failed to leave room.");
+
+      setLeaveConfirmOpen(false);
+      router.push("/interviewer/dashboard");
+    } catch (e: any) {
+      setLeaveError(e.message);
+    } finally {
+      setLeaving(false);
+    }
+  };
+
   if (error) {
     return (
       <div className="min-h-screen bg-[#050505] text-[#F5F5F5] flex items-center justify-center font-body-md">
@@ -152,6 +186,12 @@ export default function ApplicantSelectPage() {
               <span className="material-symbols-outlined text-[16px] text-[#8A938D]">person</span>
               <span className="text-xs font-bold text-[#F5F5F5]">{interviewerName}</span>
             </div>
+            <button
+              onClick={() => setLeaveConfirmOpen(true)}
+              className="text-xs font-bold uppercase tracking-wider text-[#8A938D] hover:text-[#FF4D4D] border border-[#1D2A22] hover:border-[#FF4D4D]/30 bg-[#101412] px-4 py-1.5 rounded-full transition-colors flex items-center gap-2"
+            >
+              Leave Room
+            </button>
           </div>
         </div>
       </header>
@@ -265,6 +305,47 @@ export default function ApplicantSelectPage() {
           </div>
         )}
       </div>
+
+      {leaveConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505]/80 backdrop-blur-md">
+          <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-8 max-w-sm w-full mx-4 space-y-6 shadow-2xl">
+            <div className="flex items-center gap-3 border-b border-[#1D2A22] pb-4">
+              <span className="material-symbols-outlined text-[#FF4D4D] text-2xl">warning</span>
+              <h2 className="text-lg font-black text-[#F5F5F5] uppercase tracking-wide">Leave Room?</h2>
+            </div>
+            
+            <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider leading-relaxed">
+              You are currently registered in <strong>Room {roomNumber}</strong>. If you leave, this room will become available for other physical interviewers.
+            </p>
+
+            {leaveError && (
+              <p className="text-xs font-bold uppercase tracking-wider text-[#FF4D4D] bg-[#FF4D4D]/10 p-3 rounded-lg">
+                {leaveError}
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setLeaveConfirmOpen(false);
+                  setLeaveError("");
+                }}
+                disabled={leaving}
+                className="px-4 py-2 border border-[#1D2A22] text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLeaveRoom}
+                disabled={leaving}
+                className="px-4 py-2 bg-[#FF4D4D] hover:bg-[#D32F2F] text-[#050505] font-bold rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(255,77,77,0.2)] disabled:opacity-50"
+              >
+                {leaving ? "Leaving..." : "Leave Room"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar {

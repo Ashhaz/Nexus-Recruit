@@ -134,7 +134,7 @@ export default function ActiveInterviewPage() {
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Failed to save duration");
-      router.push(`/interviewer/workspace/select?room=${roomNumber}`);
+      router.push(`/interviewer/evaluation?room=${roomNumber}&name=${encodeURIComponent(data.room.interviewer || "")}`);
     } catch (e: any) {
       alert(e.message);
     }

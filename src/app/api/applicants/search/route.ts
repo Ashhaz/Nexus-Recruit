@@ -7,24 +7,34 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q");
 
-    if (!query || query.trim().length < 2) {
-      return NextResponse.json({ applicants: [] });
-    }
-
     await connectToDatabase();
 
-    const regex = new RegExp(query, "i"); // Case-insensitive partial match
-    
-    // Search by name or rollNumber
-    const applicants = await Applicant.find({
+    const queryCondition: any = {
+      interviewStatus: "Waiting",
       $or: [
-        { name: { $regex: regex } },
-        { rollNumber: { $regex: regex } }
+        { assignedRoom: null },
+        { assignedRoom: { $exists: false } }
       ]
-    }).limit(10).lean();
+    };
+
+    if (query && query.trim().length > 0) {
+      const regex = new RegExp(query.trim(), "i");
+      queryCondition.$and = [
+        {
+          $or: [
+            { name: { $regex: regex } },
+            { rollNumber: { $regex: regex } }
+          ]
+        }
+      ];
+    }
+
+    const applicants = await Applicant.find(queryCondition)
+      .select("_id name rollNumber department year")
+      .limit(30)
+      .lean();
 
     return NextResponse.json({ applicants });
-
   } catch (error: any) {
     console.error("Applicant Search API Error:", error);
     return NextResponse.json(

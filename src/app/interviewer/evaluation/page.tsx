@@ -181,10 +181,10 @@ export default function InterviewerEvaluationPage() {
               The evaluation for <strong>{snapshot?.applicant.name}</strong> has been saved successfully.
             </p>
             <button
-              onClick={() => router.push(`/interviewer/dashboard?name=${encodeURIComponent(interviewerName)}`)}
+              onClick={() => router.push(`/interviewer/workspace/select?room=${snapshot?.room.roomNumber || ""}`)}
               className="px-6 py-3 bg-[#00FF66] text-[#050505] hover:bg-[#00B84A] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-[0_0_15px_rgba(0,255,102,0.3)]"
             >
-              Back to Dashboard
+              Back to Room Selection
             </button>
           </div>
         )}

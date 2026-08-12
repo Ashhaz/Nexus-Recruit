@@ -5,11 +5,11 @@ import Applicant from "@/models/Applicant";
 
 export async function POST(request: Request) {
   try {
-    const { roomNumber, applicantId } = await request.json();
+    const { roomNumber, applicantId, interviewerId, interviewerName } = await request.json();
 
-    if (!roomNumber || !applicantId) {
+    if (!roomNumber || !applicantId || !interviewerId || !interviewerName) {
       return NextResponse.json(
-        { success: false, error: "Missing roomNumber or applicantId." },
+        { success: false, error: "Missing required fields: roomNumber, applicantId, interviewerId, or interviewerName." },
         { status: 400 }
       );
     }
@@ -19,32 +19,54 @@ export async function POST(request: Request) {
     const room = await InterviewRoom.findOne({ roomNumber: Number(roomNumber) });
     if (!room) {
       return NextResponse.json(
-        { success: false, error: "Room not found." },
+        { success: false, error: "THIS ROOM IS NO LONGER AVAILABLE" },
         { status: 404 }
       );
     }
 
-    const applicant = await Applicant.findById(applicantId);
-    if (!applicant) {
+    // Validate that the room is registered to the correct physical interviewer
+    if (room.status !== "Occupied" || room.interviewerId !== interviewerId || room.interviewer !== interviewerName) {
       return NextResponse.json(
-        { success: false, error: "Applicant not found." },
-        { status: 404 }
+        { success: false, error: "YOU ARE NOT AUTHORIZED FOR THIS ROOM" },
+        { status: 403 }
       );
     }
 
-    // Update applicant status
-    applicant.interviewStatus = "Interviewing";
-    applicant.assignedInterviewer = room.interviewer;
-    applicant.assignedRoom = room.roomNumber;
-    await applicant.save();
+    // Atomically assign the candidate only if they are Waiting and assignedRoom is null
+    const updateResult = await Applicant.updateOne(
+      {
+        _id: applicantId,
+        interviewStatus: "Waiting",
+        $or: [
+          { assignedRoom: null },
+          { assignedRoom: { $exists: false } }
+        ]
+      },
+      {
+        $set: {
+          interviewStatus: "Interviewing",
+          assignedInterviewer: room.interviewer,
+          assignedRoom: room.roomNumber
+        }
+      }
+    );
+
+    if (updateResult.matchedCount === 0) {
+      return NextResponse.json(
+        { success: false, error: "CANDIDATE IS NO LONGER AVAILABLE" },
+        { status: 409 }
+      );
+    }
 
     // Assign to room and start timer
-    room.applicant = applicant._id;
+    room.applicant = applicantId;
     room.status = "Occupied";
     room.startedAt = new Date();
+    room.pausedAt = null;
+    room.accumulatedTime = 0;
     await room.save();
 
-    return NextResponse.json({ success: true, room, applicant });
+    return NextResponse.json({ success: true, room });
   } catch (error: any) {
     console.error("POST /api/interviewer/workspace/start Error:", error);
     return NextResponse.json(

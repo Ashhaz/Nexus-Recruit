@@ -33,6 +33,8 @@ export async function POST(request: Request) {
     }
 
     room.startedAt = new Date();
+    room.pausedAt = null;
+    room.accumulatedTime = 0;
     room.status = "Occupied";
     await room.save();
 

@@ -34,6 +34,8 @@ export async function GET(request: Request) {
           interviewer: room.interviewer,
           status: room.status,
           startedAt: room.startedAt ?? null,
+          pausedAt: room.pausedAt ?? null,
+          accumulatedTime: room.accumulatedTime ?? 0,
         },
         applicant: null,
       });
@@ -54,6 +56,8 @@ export async function GET(request: Request) {
         interviewer: room.interviewer,
         status: room.status,
         startedAt: room.startedAt ?? null,
+        pausedAt: room.pausedAt ?? null,
+        accumulatedTime: room.accumulatedTime ?? 0,
       },
       applicant: {
         _id: String(applicant._id),

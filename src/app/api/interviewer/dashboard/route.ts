@@ -57,11 +57,12 @@ export async function GET(request: Request) {
       );
     }
 
-    // Elapsed time in seconds since the room was marked Occupied
+    // Elapsed time in seconds
     const startedAt = room.startedAt ? new Date(room.startedAt) : null;
-    const elapsedSeconds = startedAt
-      ? Math.floor((Date.now() - startedAt.getTime()) / 1000)
-      : 0;
+    let elapsedSeconds = (room as any).accumulatedTime ?? 0;
+    if (startedAt && !room.pausedAt) {
+      elapsedSeconds += Math.floor((Date.now() - startedAt.getTime()) / 1000);
+    }
 
     // interviewStatus drives the "started" flag
     const started = (applicant as any).interviewStatus === "Interviewing";
