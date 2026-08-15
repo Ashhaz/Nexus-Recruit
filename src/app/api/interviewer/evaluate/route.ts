@@ -69,15 +69,13 @@ export async function POST(request: Request) {
       }
     );
 
-    // Free the room
+    // Free the room (but preserve physical interviewer ownership)
     await InterviewRoom.updateOne(
       { roomNumber },
       {
         $set: {
           status:      "Available",
           applicant:   null,
-          interviewer: "",
-          interviewerId: "",
           startedAt:   null,
           pausedAt:    null,
           accumulatedTime: 0,

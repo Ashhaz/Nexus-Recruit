@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     // Validate that the room is registered to the correct physical interviewer
-    if (room.status !== "Occupied" || room.interviewerId !== interviewerId || room.interviewer !== interviewerName) {
+    if (room.interviewerId !== interviewerId || room.interviewer !== interviewerName) {
       return NextResponse.json(
         { success: false, error: "YOU ARE NOT AUTHORIZED FOR THIS ROOM" },
         { status: 403 }

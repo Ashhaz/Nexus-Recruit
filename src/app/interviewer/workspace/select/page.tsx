@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams, useRouter } from "next/navigation";
 import CustomCursor from "@/components/ui/CustomCursor";
 
@@ -46,12 +47,19 @@ export default function ApplicantSelectPage() {
   const [leaving, setLeaving] = useState(false);
   const [leaveError, setLeaveError] = useState("");
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const fetchRoomData = useCallback(async () => {
     if (!roomNumber) {
       setError("No room number provided. Add ?room=X to the URL.");
       setLoading(false);
       return;
     }
+    setError("");
     try {
       const resRoom = await fetch(`/api/interviewer/workspace?room=${roomNumber}`);
       const jsonRoom = await resRoom.json();
@@ -205,156 +213,179 @@ export default function ApplicantSelectPage() {
         </div>
       </header>
 
-      <div className="flex-1 max-w-5xl w-full mx-auto p-8 flex flex-col items-center mt-8">
-        
-        {!selectedApplicant ? (
-          <div className="w-full max-w-2xl bg-[#101412] rounded-xl p-8 md:p-12 shadow-2xl border border-[#1D2A22]">
-            <div className="text-center mb-10">
-              <h2 className="text-2xl font-black text-[#F5F5F5] uppercase tracking-wide">Select Applicant</h2>
-              <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider mt-3">Search for a waiting candidate to begin the interview process.</p>
-            </div>
+      <main className="w-full flex-1">
+        <div className="w-full max-w-5xl mx-auto px-8 py-12">
+          {selectedApplicant ? (
+            <section className="block w-full max-w-2xl mx-auto">
+              <div className="block w-full bg-[#101412] rounded-xl p-8 md:p-12 shadow-2xl border border-[#00FF66]/20 text-center">
+                <div className="w-20 h-20 bg-[#00FF66]/10 rounded-full flex items-center justify-center border border-[#00FF66]/20 mb-6 shadow-inner text-[#00FF66] mx-auto">
+                  <span className="material-symbols-outlined text-4xl">person_check</span>
+                </div>
+                
+                <h3 className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-2">Confirm Selection</h3>
+                <h2 className="text-3xl font-black text-[#F5F5F5] mb-2 uppercase tracking-wide break-words">{selectedApplicant.name}</h2>
+                <p className="text-lg font-mono text-[#00FF66] font-bold mb-8">{selectedApplicant.rollNumber}</p>
 
-            <div className="w-full flex flex-col gap-3 text-left">
-              <label className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest pl-1">Search Database</label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#8A938D] text-[24px]">search</span>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={handleSearch}
-                  placeholder="Name or Roll Number..."
-                  className="w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg pl-12 pr-10 py-4 text-sm focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none text-[#F5F5F5] placeholder:text-[#8A938D]/40"
-                />
-                {isSearching && (
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 border-2 border-[#00FF66]/30 border-t-[#00FF66] rounded-full animate-spin"></div>
-                )}
+                <div className="w-full grid grid-cols-2 gap-4 mb-10 text-left">
+                  <div className="bg-[#0B0D0C]/40 rounded-lg p-4 border border-[#1D2A22]">
+                    <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-widest mb-1">Room</p>
+                    <p className="text-base font-bold text-[#F5F5F5]">{roomNumber}</p>
+                  </div>
+                  <div className="bg-[#0B0D0C]/40 rounded-lg p-4 border border-[#1D2A22]">
+                    <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-widest mb-1">Interviewer</p>
+                    <p className="text-base font-bold text-[#F5F5F5] truncate">{interviewerName}</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleStartInterview}
+                  disabled={isStarting}
+                  className="w-full py-4 bg-[#00FF66] text-[#050505] hover:bg-[#00B84A] rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(0,255,102,0.35)] disabled:opacity-50 disabled:shadow-none tracking-widest"
+                >
+                  {isStarting ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-[#050505]/30 border-t-[#050505] rounded-full animate-spin"></div>
+                      STARTING...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-sm font-bold">play_circle</span>
+                      START INTERVIEW
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setSelectedApplicant(null)}
+                  disabled={isStarting}
+                  className="mt-6 text-xs text-[#8A938D] hover:text-[#00FF66] font-bold uppercase tracking-wider transition-colors block mx-auto"
+                >
+                  CANCEL AND SEARCH AGAIN
+                </button>
               </div>
+            </section>
+          ) : (
+            <section className="block w-full max-w-4xl mx-auto">
+              <div className="w-full bg-[#101412] rounded-xl p-8 md:p-12 shadow-2xl border border-[#1D2A22]">
+                <div className="text-center mb-10">
+                  <h2 className="text-2xl font-black text-[#F5F5F5] uppercase tracking-wide">Select Applicant</h2>
+                  <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider mt-3">Search for a waiting candidate to begin the interview process.</p>
+                </div>
 
-              {/* Results list */}
-              {searchResults.length > 0 && (
-                <ul className="max-h-72 overflow-y-auto border border-[#1D2A22] rounded-lg bg-[#0B0D0C] divide-y divide-[#1D2A22] mt-4 shadow-2xl custom-scrollbar">
-                  {searchResults.map((a) => (
-                    <li key={a._id}>
-                      <button
-                        onClick={() => {
-                          setSelectedApplicant(a);
-                          setSearchQuery("");
-                          setSearchResults([]);
-                        }}
-                        className="w-full text-left px-6 py-4 hover:bg-[#00FF66]/5 transition-colors group flex items-center justify-between"
-                      >
-                        <div>
-                          <p className="text-sm font-bold text-[#F5F5F5] group-hover:text-[#00FF66] transition-colors">{a.name}</p>
-                          <p className="text-xs text-[#8A938D] mt-0.5 font-mono">{a.rollNumber}</p>
-                          {(a.department || a.year) && (
-                            <p className="text-[10px] text-[#8A938D]/60 mt-1.5 font-bold uppercase tracking-wider">
-                              {[a.department, a.year].filter(Boolean).join(" · ")}
-                            </p>
-                          )}
-                        </div>
-                        <span className="material-symbols-outlined text-[#8A938D] group-hover:text-[#00FF66] transition-colors text-sm font-bold">arrow_forward</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                <div className="w-full flex flex-col gap-3 text-left">
+                  <label className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest pl-1">Search Database</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#8A938D] text-[24px]">search</span>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={handleSearch}
+                      placeholder="Name or Roll Number..."
+                      className="w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg pl-12 pr-10 py-4 text-sm focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none text-[#F5F5F5] placeholder:text-[#8A938D]/40"
+                    />
+                    {isSearching && (
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 border-2 border-[#00FF66]/30 border-t-[#00FF66] rounded-full animate-spin"></div>
+                    )}
+                  </div>
 
-              {/* No results */}
-              {searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && (
-                <p className="text-xs text-[#8A938D] mt-4 text-center font-semibold uppercase tracking-wider">No waiting applicants found for &ldquo;{searchQuery}&rdquo;</p>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="w-full max-w-xl bg-[#101412] rounded-xl p-8 md:p-12 shadow-2xl border border-[#00FF66]/20 flex flex-col items-center text-center">
-            <div className="w-20 h-20 bg-[#00FF66]/10 rounded-full flex items-center justify-center border border-[#00FF66]/20 mb-6 shadow-inner text-[#00FF66]">
-              <span className="material-symbols-outlined text-4xl">person_check</span>
-            </div>
-            
-            <h3 className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-2">Confirm Selection</h3>
-            <h2 className="text-3xl font-black text-[#F5F5F5] mb-2 uppercase tracking-wide">{selectedApplicant.name}</h2>
-            <p className="text-lg font-mono text-[#00FF66] font-bold mb-8">{selectedApplicant.rollNumber}</p>
+                  {/* Results list */}
+                  {searchResults.length > 0 && (
+                    <ul className="max-h-72 overflow-y-auto border border-[#1D2A22] rounded-lg bg-[#0B0D0C] divide-y divide-[#1D2A22] mt-4 shadow-2xl custom-scrollbar">
+                      {searchResults.map((a) => (
+                        <li key={a._id}>
+                          <button
+                            onClick={() => {
+                              setSelectedApplicant(a);
+                              setSearchQuery("");
+                              setSearchResults([]);
+                            }}
+                            className="w-full text-left px-6 py-4 hover:bg-[#00FF66]/5 transition-colors group flex items-center justify-between"
+                          >
+                            <div>
+                              <p className="text-sm font-bold text-[#F5F5F5] group-hover:text-[#00FF66] transition-colors">{a.name}</p>
+                              <p className="text-xs text-[#8A938D] mt-0.5 font-mono">{a.rollNumber}</p>
+                              {(a.department || a.year) && (
+                                <p className="text-[10px] text-[#8A938D]/60 mt-1.5 font-bold uppercase tracking-wider">
+                                  {[a.department, a.year].filter(Boolean).join(" · ")}
+                                </p>
+                              )}
+                            </div>
+                            <span className="material-symbols-outlined text-[#8A938D] group-hover:text-[#00FF66] transition-colors text-sm font-bold">arrow_forward</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
 
-            <div className="w-full grid grid-cols-2 gap-4 mb-10 text-left">
-              <div className="bg-[#0B0D0C]/40 rounded-lg p-4 border border-[#1D2A22]">
-                <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-widest mb-1">Room</p>
-                <p className="text-base font-bold text-[#F5F5F5]">{roomNumber}</p>
+                  {/* No results */}
+                  {searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && (
+                    <p className="text-xs text-[#8A938D] mt-4 text-center font-semibold uppercase tracking-wider">No waiting applicants found for &ldquo;{searchQuery}&rdquo;</p>
+                  )}
+                </div>
               </div>
-              <div className="bg-[#0B0D0C]/40 rounded-lg p-4 border border-[#1D2A22]">
-                <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-widest mb-1">Interviewer</p>
-                <p className="text-base font-bold text-[#F5F5F5] truncate">{interviewerName}</p>
-              </div>
-            </div>
-
-            <button
-              onClick={handleStartInterview}
-              disabled={isStarting}
-              className="w-full py-4 bg-[#00FF66] text-[#050505] hover:bg-[#00B84A] rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(0,255,102,0.35)] disabled:opacity-50 disabled:shadow-none tracking-widest"
-            >
-              {isStarting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-[#050505]/30 border-t-[#050505] rounded-full animate-spin"></div>
-                  STARTING...
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-sm font-bold">play_circle</span>
-                  START INTERVIEW
-                </>
-              )}
-            </button>
-
-            <button
-              onClick={() => setSelectedApplicant(null)}
-              disabled={isStarting}
-              className="mt-6 text-xs text-[#8A938D] hover:text-[#00FF66] font-bold uppercase tracking-wider transition-colors"
-            >
-              Cancel and search again
-            </button>
-          </div>
-        )}
-      </div>
-
-      {leaveConfirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505]/80 backdrop-blur-md">
-          <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-8 max-w-sm w-full mx-4 space-y-6 shadow-2xl">
-            <div className="flex items-center gap-3 border-b border-[#1D2A22] pb-4">
-              <span className="material-symbols-outlined text-[#FF4D4D] text-2xl">warning</span>
-              <h2 className="text-lg font-black text-[#F5F5F5] uppercase tracking-wide">Leave Room?</h2>
-            </div>
-            
-            <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider leading-relaxed">
-              You are currently registered in <strong>Room {roomNumber}</strong>. If you leave, this room will become available for other physical interviewers.
-            </p>
-
-            {leaveError && (
-              <p className="text-xs font-bold uppercase tracking-wider text-[#FF4D4D] bg-[#FF4D4D]/10 p-3 rounded-lg">
-                {leaveError}
-              </p>
-            )}
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                onClick={() => {
-                  setLeaveConfirmOpen(false);
-                  setLeaveError("");
-                }}
-                disabled={leaving}
-                className="px-4 py-2 border border-[#1D2A22] text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleLeaveRoom}
-                disabled={leaving}
-                className="px-4 py-2 bg-[#FF4D4D] hover:bg-[#D32F2F] text-[#050505] font-bold rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(255,77,77,0.2)] disabled:opacity-50"
-              >
-                {leaving ? "Leaving..." : "Leave Room"}
-              </button>
-            </div>
-          </div>
+            </section>
+          )}
         </div>
-      )}
+      </main>
+
+      {leaveConfirmOpen &&
+        mounted &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-[#050505]/80 backdrop-blur-md">
+            <div className="relative w-[448px] max-w-full flex-shrink-0 bg-[#101412] border border-[#1D2A22] rounded-xl shadow-2xl p-6 md:p-8">
+
+              <div className="w-full flex items-start gap-4 border-b border-[#1D2A22] pb-5">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[#FF4D4D]">
+                    warning
+                  </span>
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-black text-[#F5F5F5] uppercase tracking-wide">
+                    Leave Room?
+                  </h2>
+
+                  <p className="mt-3 w-full text-sm text-[#8A938D] leading-6">
+                    You are currently registered in Room {roomNumber}. If you leave,
+                    this room will become available for other physical interviewers.
+                  </p>
+                </div>
+              </div>
+
+              {leaveError && (
+                <div className="w-full mt-5 text-sm font-bold text-[#FF4D4D] bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 rounded-lg p-3">
+                  {leaveError}
+                </div>
+              )}
+
+              <div className="w-full flex items-center justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLeaveConfirmOpen(false);
+                    setLeaveError("");
+                  }}
+                  disabled={leaving}
+                  className="px-5 py-3 border border-[#1D2A22] text-[#8A938D] hover:text-[#F5F5F5] hover:border-[#8A938D]/40 rounded-lg text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLeaveRoom}
+                  disabled={leaving}
+                  className="px-5 py-3 bg-[#FF4D4D] hover:bg-[#D32F2F] text-[#050505] rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(255,77,77,0.2)] disabled:opacity-50"
+                >
+                  {leaving ? "Leaving..." : "Leave Room"}
+                </button>
+              </div>
+
+            </div>
+          </div>,
+          document.body
+        )}
 
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar {

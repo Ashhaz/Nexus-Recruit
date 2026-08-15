@@ -5,9 +5,10 @@ import Applicant from "@/models/Applicant";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { applicantId, duration } = body as {
+    const { applicantId, duration, notes } = body as {
       applicantId: string;
       duration: number;
+      notes?: string;
     };
 
     if (!applicantId || typeof duration !== "number") {
@@ -19,9 +20,14 @@ export async function POST(request: Request) {
 
     await connectToDatabase();
 
+    const updateFields: any = { interviewDuration: duration };
+    if (typeof notes === "string") {
+      updateFields.interviewNotes = notes;
+    }
+
     await Applicant.updateOne(
       { _id: applicantId },
-      { $set: { interviewDuration: duration } }
+      { $set: updateFields }
     );
 
     return NextResponse.json({ success: true });

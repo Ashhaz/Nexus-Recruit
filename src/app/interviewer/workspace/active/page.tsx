@@ -15,10 +15,19 @@ interface ApplicantData {
   phone?: string;
   responses: Record<string, string>;
   interviewDuration: number;
+  interviewNotes?: string;
 }
 
 interface WorkspaceData {
-  room: { roomNumber: number; interviewer: string; status: string; startedAt: string | null };
+  room: {
+    roomNumber: number;
+    interviewerId: string;
+    interviewer: string;
+    status: string;
+    startedAt: string | null;
+    pausedAt: string | null;
+    accumulatedTime: number;
+  };
   applicant: ApplicantData | null;
 }
 
@@ -45,11 +54,14 @@ export default function ActiveInterviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [interviewerName, setInterviewerName] = useState<string>("");
+  const [interviewerId, setInterviewerId] = useState<string>("");
+
   const [elapsed, setElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [notes, setNotes] = useState("");
 
   const fetchData = useCallback(async () => {
     if (!roomNumber) {
@@ -68,19 +80,39 @@ export default function ActiveInterviewPage() {
       if (!wsData.applicant) {
         throw new Error("No applicant assigned. Go back and select an applicant.");
       }
-      
-      setElapsed(wsData.applicant.interviewDuration || 0);
 
-      // Auto-start timer on load if we have a startedAt time
-      if (wsData.room.startedAt && !isRunning) {
-        setIsRunning(true);
+      setInterviewerName(wsData.room.interviewer ?? "");
+      setInterviewerId(wsData.room.interviewerId ?? "");
+      
+      if (wsData.applicant.interviewNotes) {
+        setNotes(wsData.applicant.interviewNotes);
       }
+
+      // Timer hydration logic
+      let initialElapsed = 0;
+      let initialIsRunning = false;
+
+      if (wsData.room.pausedAt !== null) {
+        initialElapsed = wsData.room.accumulatedTime;
+        initialIsRunning = false;
+      } else if (wsData.room.startedAt !== null && wsData.room.pausedAt === null) {
+        initialElapsed =
+          wsData.room.accumulatedTime +
+          Math.floor((Date.now() - new Date(wsData.room.startedAt).getTime()) / 1000);
+        initialIsRunning = true;
+      } else {
+        initialElapsed = wsData.applicant.interviewDuration || 0;
+        initialIsRunning = false;
+      }
+
+      setElapsed(initialElapsed);
+      setIsRunning(initialIsRunning);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [roomNumber, isRunning]);
+  }, [roomNumber]);
 
   useEffect(() => {
     fetchData();
@@ -89,35 +121,97 @@ export default function ActiveInterviewPage() {
     };
   }, [fetchData]);
 
-  // Drawer escape key
+  // Timer interval logic using server state source of truth
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDrawerOpen(false);
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, []);
-
-  // Timer logic
-  useEffect(() => {
-    if (isRunning) {
-      timerRef.current = setInterval(() => {
-        setElapsed((prev) => prev + 1);
-      }, 1000);
+    if (isRunning && data?.room.startedAt) {
+      const startTime = new Date(data.room.startedAt).getTime();
+      const accum = data.room.accumulatedTime;
+      
+      const updateTimer = () => {
+        const currentElapsed = accum + Math.floor((Date.now() - startTime) / 1000);
+        setElapsed(currentElapsed);
+      };
+      
+      updateTimer();
+      timerRef.current = setInterval(updateTimer, 1000);
     } else if (timerRef.current) {
       clearInterval(timerRef.current);
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isRunning]);
+  }, [isRunning, data?.room.startedAt, data?.room.accumulatedTime]);
 
-  const handleStartResume = () => {
-    setIsRunning(true);
+  const handleStartResume = async () => {
+    if (!roomNumber || !interviewerId || !interviewerName) return;
+    try {
+      const res = await fetch("/api/interviewer/workspace/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomNumber,
+          interviewerId,
+          interviewerName,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Failed to resume interview");
+      
+      setData((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          room: {
+            ...prev.room,
+            startedAt: json.room.startedAt,
+            pausedAt: json.room.pausedAt,
+            accumulatedTime: json.room.accumulatedTime,
+          },
+        };
+      });
+      
+      const newElapsed = json.room.accumulatedTime +
+        Math.floor((Date.now() - new Date(json.room.startedAt).getTime()) / 1000);
+      setElapsed(newElapsed);
+      setIsRunning(true);
+    } catch (e: any) {
+      alert(e.message);
+    }
   };
 
-  const handlePause = () => {
-    setIsRunning(false);
+  const handlePause = async () => {
+    if (!roomNumber || !interviewerId || !interviewerName) return;
+    try {
+      const res = await fetch("/api/interviewer/workspace/pause", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomNumber,
+          interviewerId,
+          interviewerName,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Failed to pause interview");
+      
+      setData((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          room: {
+            ...prev.room,
+            startedAt: json.room.startedAt,
+            pausedAt: json.room.pausedAt,
+            accumulatedTime: json.room.accumulatedTime,
+          },
+        };
+      });
+      
+      setElapsed(json.room.accumulatedTime);
+      setIsRunning(false);
+    } catch (e: any) {
+      alert(e.message);
+    }
   };
 
   const handleEnd = async () => {
@@ -130,17 +224,16 @@ export default function ActiveInterviewPage() {
         body: JSON.stringify({
           applicantId: data.applicant._id,
           duration: elapsed,
+          notes,
         }),
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Failed to save duration");
+      if (!json.success) throw new Error(json.error || "Failed to save duration and notes");
       router.push(`/interviewer/evaluation?room=${roomNumber}&name=${encodeURIComponent(data.room.interviewer || "")}`);
     } catch (e: any) {
       alert(e.message);
     }
   };
-
-
 
   if (error) {
     return (
@@ -155,11 +248,11 @@ export default function ActiveInterviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-[#F5F5F5] font-body-md selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+    <div className="min-h-screen bg-[#050505] text-[#F5F5F5] font-body-md selection:bg-[#00FF66]/30 selection:text-[#00FF66] flex flex-col">
       <CustomCursor />
       
       <header className="w-full sticky top-0 z-50 border-b border-[#1D2A22] bg-[#050505]/80 backdrop-blur-xl shadow-sm">
-        <div className="flex items-center justify-between px-8 h-16 max-w-5xl mx-auto">
+        <div className="flex items-center justify-between px-8 h-16 max-w-[1600px] w-full mx-auto">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#00FF66] flex items-center justify-center text-[#050505] shadow-[0_0_12px_rgba(0,255,102,0.4)]">
               <span className="material-symbols-outlined text-[18px] font-bold">radio_button_checked</span>
@@ -178,136 +271,138 @@ export default function ActiveInterviewPage() {
                 <span className="text-[9px] font-bold text-[#8A938D] uppercase tracking-wider">Room</span>
                 <span className="text-sm font-black text-[#00FF66]">{data.room.roomNumber}</span>
               </div>
+              <div className="bg-[#101412] px-4 py-1.5 rounded-full flex items-center gap-2 border border-[#1D2A22]">
+                <span className="material-symbols-outlined text-[16px] text-[#8A938D]">person</span>
+                <span className="text-xs font-bold text-[#F5F5F5]">{data.room.interviewer}</span>
+              </div>
             </div>
           )}
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-8 py-8 space-y-6">
-        {loading ? (
-          <div className="bg-[#101412] border border-[#1D2A22] p-8 rounded-xl flex flex-col gap-4 shadow-xl">
-            <Skeleton h="h-8 w-1/3" />
-            <Skeleton h="h-24" />
-          </div>
-        ) : data?.applicant ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Applicant Details */}
-            <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-6 lg:col-span-1 space-y-5 shadow-xl">
-              <div className="flex items-center gap-2 mb-1 border-b border-[#1D2A22] pb-3">
-                <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">person_pin</span>
-                <h2 className="text-xs font-black text-[#F5F5F5] uppercase tracking-widest">Candidate Info</h2>
-              </div>
+      <main className="w-full flex-1">
+        <div className="max-w-[1600px] w-full mx-auto px-8 py-8">
+          {loading ? (
+            <div className="bg-[#101412] border border-[#1D2A22] p-8 rounded-xl flex flex-col gap-4 shadow-xl">
+              <Skeleton h="h-8 w-1/3" />
+              <Skeleton h="h-24" />
+            </div>
+          ) : data?.applicant ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(220px,25%)_minmax(320px,40%)_minmax(320px,35%)] gap-6 items-start">
               
-              <div>
-                <h3 className="text-xl font-black text-[#F5F5F5] uppercase tracking-wide">{data.applicant.name}</h3>
-                <p className="text-xs font-mono text-[#8A938D] mt-0.5">{data.applicant.rollNumber}</p>
-              </div>
-              <div className="space-y-4 pt-4 border-t border-[#1D2A22]/50">
-                {[
-                  { label: "Interviewer", value: data.room.interviewer },
-                  { label: "Department", value: data.applicant.department },
-                  { label: "Branch", value: data.applicant.branch },
-                  { label: "Year", value: data.applicant.year },
-                  { label: "Email", value: data.applicant.email },
-                  { label: "Phone", value: data.applicant.phone },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex flex-col">
-                    <span className="text-[9px] uppercase tracking-widest text-[#8A938D] font-bold">{label}</span>
-                    <span className="text-sm font-semibold text-[#F5F5F5] mt-0.5">{value || "—"}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+              {/* LEFT Column: Candidate Info */}
+              <section className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl p-6 lg:h-[calc(100vh-12rem)] flex flex-col shadow-xl overflow-hidden">
+                <div className="flex items-center gap-2 mb-1 border-b border-[#1D2A22] pb-3">
+                  <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">person_pin</span>
+                  <h2 className="text-xs font-black text-[#F5F5F5] uppercase tracking-widest">Candidate Info</h2>
+                </div>
+                
+                <div className="mt-4">
+                  <h3 className="text-xl font-black text-[#F5F5F5] uppercase tracking-wide">{data.applicant.name}</h3>
+                  <p className="text-xs font-mono text-[#8A938D] mt-0.5">{data.applicant.rollNumber}</p>
+                </div>
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 mt-4 space-y-4 pt-4 border-t border-[#1D2A22]/50">
+                  {[
+                    { label: "Interviewer", value: data.room.interviewer },
+                    { label: "Department", value: data.applicant.department },
+                    { label: "Branch", value: data.applicant.branch },
+                    { label: "Year", value: data.applicant.year },
+                    { label: "Email", value: data.applicant.email },
+                    { label: "Phone", value: data.applicant.phone },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex flex-col">
+                      <span className="text-[9px] uppercase tracking-widest text-[#8A938D] font-bold">{label}</span>
+                      <span className="text-sm font-semibold text-[#F5F5F5] mt-0.5">{value || "—"}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
 
-            {/* Timer and Actions */}
-            <div className="lg:col-span-2 flex flex-col gap-6">
-              <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-8 flex flex-col items-center justify-center gap-4 min-h-[220px] relative overflow-hidden shadow-2xl">
-                {isRunning && (
-                  <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-0.5 bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 text-[#FF4D4D] rounded-full text-[10px] font-bold uppercase tracking-wider animate-pulse">
-                    <span className="w-1.5 h-1.5 bg-[#FF4D4D] rounded-full"></span> Live
-                  </div>
-                )}
-                
-                <p className="text-[10px] text-[#8A938D] font-black uppercase tracking-widest">Interview Duration</p>
-                <p className="font-mono font-bold text-7xl text-[#00FF66] tabular-nums tracking-tight drop-shadow-[0_0_15px_rgba(0,255,102,0.4)]">
-                  {formatTime(elapsed)}
-                </p>
-                
-                <div className="flex items-center gap-3 mt-6">
-                  {!isRunning ? (
-                    <button onClick={handleStartResume} className="px-8 py-3 bg-[#00FF66] text-[#050505] rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-[#00B84A] flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(0,255,102,0.3)]">
-                      <span className="material-symbols-outlined text-sm font-bold">play_arrow</span> Resume
-                    </button>
-                  ) : (
-                    <button onClick={handlePause} className="px-8 py-3 bg-[#0B0D0C] border border-[#1D2A22] text-[#F5F5F5] hover:bg-[#101412] rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-2">
-                      <span className="material-symbols-outlined text-sm font-bold">pause</span> Pause
-                    </button>
+              {/* CENTER Column: Interview Control & Notes */}
+              <section className="w-full flex flex-col gap-6 lg:h-[calc(100vh-12rem)]">
+                <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-8 flex flex-col gap-4 flex-1 relative overflow-hidden shadow-2xl lg:h-full">
+                  {isRunning && (
+                    <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-0.5 bg-[#00FF66]/10 border border-[#00FF66]/20 text-[#00FF66] rounded-full text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                      <span className="w-1.5 h-1.5 bg-[#00FF66] rounded-full"></span> Live
+                    </div>
                   )}
-                  <button onClick={handleEnd} className="px-8 py-3 bg-[#FF4D4D] text-[#F5F5F5] hover:bg-[#D32F2F] rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(255,77,77,0.25)]">
-                    <span className="material-symbols-outlined text-sm font-bold">stop</span> End Interview
-                  </button>
-                </div>
-              </div>
+                  
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <p className="text-[10px] text-[#8A938D] font-black uppercase tracking-widest mt-2">
+                      {isRunning ? "Interview Live" : "Interview Paused"}
+                    </p>
+                    <p className="font-mono font-bold text-7xl text-[#00FF66] tabular-nums tracking-tight drop-shadow-[0_0_15px_rgba(0,255,102,0.4)] mt-2">
+                      {formatTime(elapsed)}
+                    </p>
+                    
+                    <div className="flex items-center gap-3 mt-6">
+                      {!isRunning ? (
+                        <button onClick={handleStartResume} className="px-8 py-3 bg-[#00FF66] text-[#050505] rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-[#00B84A] flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(0,255,102,0.3)]">
+                          <span className="material-symbols-outlined text-sm font-bold">play_arrow</span> Resume
+                        </button>
+                      ) : (
+                        <button onClick={handlePause} className="px-8 py-3 bg-[#0B0D0C] border border-[#1D2A22] text-[#F5F5F5] hover:bg-[#101412] rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-2">
+                          <span className="material-symbols-outlined text-sm font-bold">pause</span> Pause
+                        </button>
+                      )}
+                      <button onClick={handleEnd} className="px-8 py-3 bg-[#FF4D4D] text-[#F5F5F5] hover:bg-[#D32F2F] rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(255,77,77,0.25)]">
+                        <span className="material-symbols-outlined text-sm font-bold">stop</span> End Interview
+                      </button>
+                    </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button
-                  onClick={() => setDrawerOpen(true)}
-                  className="px-4 py-5 bg-[#0B0D0C] hover:bg-[#00FF66]/10 hover:text-[#00FF66] hover:border-[#00FF66]/40 border border-[#1D2A22] rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-3 shadow-md"
-                >
-                  <span className="material-symbols-outlined text-[18px]">feed</span> View Application
-                </button>
-                <button
-                  onClick={() => router.push(`/interviewer/evaluation?room=${roomNumber}&name=${encodeURIComponent(data?.room.interviewer || "")}`)}
-                  className="px-4 py-5 bg-[#00FF66] text-[#050505] hover:bg-[#00B84A] rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(0,255,102,0.35)]"
-                >
-                  <span className="material-symbols-outlined text-[18px] font-bold">assignment_turned_in</span> Begin Evaluation
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </div>
+                    <button
+                      onClick={() => router.push(`/interviewer/evaluation?room=${roomNumber}&name=${encodeURIComponent(data.room.interviewer || "")}`)}
+                      className="w-full mt-6 py-4 bg-[#00FF66]/10 hover:bg-[#00FF66]/20 border border-[#00FF66]/30 text-[#00FF66] rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <span className="material-symbols-outlined text-sm font-bold">assignment_turned_in</span> Begin Evaluation
+                    </button>
+                  </div>
 
-      {/* View Application Drawer */}
-      {drawerOpen && data?.applicant && (
-        <>
-          <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }} onClick={() => setDrawerOpen(false)} />
-          <div style={{ position: "fixed", top: 0, right: 0, zIndex: 101, width: "min(45vw, 560px)", height: "100vh", background: "#0B0D0C", borderLeft: "1px solid #1D2A22", boxShadow: "-8px 0 32px rgba(0,0,0,0.8)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid #1D2A22", background: "#0B0D0C" }}>
-              <div>
-                <h3 style={{ fontSize: "1.125rem", fontWeight: 900, color: "#F5F5F5", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>{data.applicant.name}</h3>
-                <p style={{ fontSize: "0.8rem", color: "#8A938D", margin: "4px 0 0", fontFamily: "monospace" }}>{data.applicant.rollNumber}</p>
-              </div>
-              <button onClick={() => setDrawerOpen(false)} className="hover:text-[#00FF66] transition-colors" style={{ padding: "6px", borderRadius: "50%", border: "none", background: "transparent", color: "#8A938D", cursor: "pointer", display: "flex", alignItems: "center" }}>
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
+                  <hr className="border-[#1D2A22] my-4" />
 
-            <div style={{ flex: 1, overflowY: "auto", padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }} className="custom-scrollbar">
-              {data.applicant.responses && Object.keys(data.applicant.responses).length > 0 ? (
-                <div>
-                  <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>article</span> Form Responses
-                  </h4>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                    {Object.entries(data.applicant.responses).map(([question, answer], idx) => (
-                      <div key={idx} style={{ borderLeft: "2px solid #00FF66", paddingLeft: "14px" }}>
-                        <p style={{ fontSize: "11px", color: "#8A938D", marginBottom: "6px", fontWeight: 600 }}>{question}</p>
-                        <p style={{ fontSize: "13px", color: "#F5F5F5", lineHeight: 1.6 }}>{answer || "—"}</p>
-                      </div>
-                    ))}
+                  <div className="flex-1 flex flex-col min-h-[180px] text-left">
+                    <label htmlFor="notes" className="text-[10px] text-[#8A938D] font-black uppercase tracking-widest mb-2 block">
+                      Interviewer Notes
+                    </label>
+                    <textarea
+                      id="notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Type observations during the interview..."
+                      className="flex-1 w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg px-4 py-3 text-sm text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none resize-none"
+                    />
                   </div>
                 </div>
-              ) : (
-                <div style={{ textAlign: "center", padding: "40px 0", color: "#8A938D" }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: "48px", opacity: 0.5, marginBottom: "16px" }}>feed</span>
-                  <p className="text-xs font-bold uppercase tracking-wider">No form responses available.</p>
+              </section>
+
+              {/* RIGHT Column: Application Responses */}
+              <section className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl p-6 lg:h-[calc(100vh-12rem)] flex flex-col shadow-xl overflow-hidden">
+                <div className="flex items-center gap-2 mb-1 border-b border-[#1D2A22] pb-3">
+                  <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">article</span>
+                  <h2 className="text-xs font-black text-[#F5F5F5] uppercase tracking-widest">Application Responses</h2>
                 </div>
-              )}
+                
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-6 pt-4">
+                  {data.applicant.responses && Object.keys(data.applicant.responses).length > 0 ? (
+                    Object.entries(data.applicant.responses).map(([question, answer], idx) => (
+                      <div key={idx} className="space-y-2 border-b border-[#1D2A22]/50 pb-4 last:border-0 last:pb-0">
+                        <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-widest break-words">{question}</p>
+                        <p className="text-sm text-[#F5F5F5] leading-relaxed break-words">{answer || "—"}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-20 text-[#8A938D]">
+                      <span className="material-symbols-outlined text-4xl opacity-50 mb-3">feed</span>
+                      <p className="text-xs font-bold uppercase tracking-wider">No responses available.</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+
             </div>
-          </div>
-        </>
-      )}
+          ) : null}
+        </div>
+      </main>
 
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar {

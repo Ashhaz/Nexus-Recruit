@@ -88,6 +88,9 @@ export default function InterviewerEvaluationPage() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Failed to load applicant");
       setSnapshot(json as DashboardSnapshot);
+      if (json.applicant && json.applicant.interviewNotes) {
+        setNotes(json.applicant.interviewNotes);
+      }
     } catch (e: any) {
       setSnapshotError(e.message);
     } finally {
@@ -133,6 +136,49 @@ export default function InterviewerEvaluationPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-[#050505] text-[#F5F5F5] font-body-md selection:bg-[#00FF66]/30 selection:text-[#00FF66] flex flex-col">
+        <CustomCursor />
+        
+        <header className="w-full sticky top-0 z-50 border-b border-[#1D2A22] bg-[#050505]/80 backdrop-blur-xl shadow-sm">
+          <div className="flex items-center justify-between px-8 h-16 max-w-3xl mx-auto">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[#00FF66] flex items-center justify-center text-[#050505] shadow-[0_0_12px_rgba(0,255,102,0.4)]">
+                <span className="material-symbols-outlined text-[18px] font-bold">terminal</span>
+              </div>
+              <div>
+                <p className="font-black text-[#F5F5F5] text-sm tracking-wide uppercase">NEXUS</p>
+                <p className="text-[9px] text-[#8A938D] font-bold uppercase tracking-widest">Evaluation Form</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="w-full flex-1 flex items-center justify-center py-10 px-4">
+          <section className="w-full max-w-2xl mx-auto">
+            <div className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl p-10 text-center shadow-xl">
+              <div className="w-16 h-16 rounded-full bg-[#00FF66]/10 flex items-center justify-center text-[#00FF66] border border-[#00FF66]/20 mx-auto mb-6">
+                <span className="material-symbols-outlined text-[36px]">check_circle</span>
+              </div>
+              <h2 className="text-2xl font-black text-[#F5F5F5] uppercase tracking-wide mb-4">Evaluation Submitted</h2>
+              <p className="w-full max-w-full min-w-0 text-center text-sm text-[#8A938D] font-semibold uppercase tracking-wider mx-auto mb-8 leading-relaxed">
+                The evaluation for <strong>{snapshot?.applicant?.name || "the candidate"}</strong> has been saved successfully.
+              </p>
+              <button
+                type="button"
+                onClick={() => router.push(`/interviewer/workspace/select?room=${snapshot?.room?.roomNumber || ""}`)}
+                className="w-full py-4 bg-[#00FF66] text-[#050505] hover:bg-[#00B84A] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-[0_0_15px_rgba(0,255,102,0.3)] block"
+              >
+                Back to Room Selection
+              </button>
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div
       className="min-h-screen bg-[#050505] text-[#F5F5F5] font-body-md selection:bg-[#00FF66]/30 selection:text-[#00FF66]"
@@ -170,24 +216,6 @@ export default function InterviewerEvaluationPage() {
       {/* Canvas */}
       <div className="max-w-3xl mx-auto px-8 py-8 space-y-6">
 
-        {/* Submitted state */}
-        {submitted && (
-          <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-10 flex flex-col items-center gap-5 text-center shadow-xl">
-            <div className="w-16 h-16 rounded-full bg-[#00FF66]/10 flex items-center justify-center text-[#00FF66] border border-[#00FF66]/20">
-              <span className="material-symbols-outlined text-[36px]">check_circle</span>
-            </div>
-            <h2 className="text-2xl font-black text-[#F5F5F5] uppercase tracking-wide">Evaluation Submitted</h2>
-            <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider max-w-xs">
-              The evaluation for <strong>{snapshot?.applicant.name}</strong> has been saved successfully.
-            </p>
-            <button
-              onClick={() => router.push(`/interviewer/workspace/select?room=${snapshot?.room.roomNumber || ""}`)}
-              className="px-6 py-3 bg-[#00FF66] text-[#050505] hover:bg-[#00B84A] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-[0_0_15px_rgba(0,255,102,0.3)]"
-            >
-              Back to Room Selection
-            </button>
-          </div>
-        )}
 
         {/* Error loading snapshot */}
         {!submitted && snapshotError && (
@@ -272,22 +300,6 @@ export default function InterviewerEvaluationPage() {
               </div>
             </div>
 
-            {/* ── Notes ───────────────────────────────────────────────────── */}
-            <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-6 shadow-xl">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">edit_note</span>
-                <h2 className="text-xs font-black text-[#F5F5F5] uppercase tracking-widest">Interview Notes</h2>
-                <span className="text-[9px] text-[#8A938D] font-bold uppercase tracking-wider ml-auto">Optional</span>
-              </div>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={5}
-                placeholder="Add observations, strengths, concerns, or any noteworthy information about the candidate..."
-                className="w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg px-4 py-3 text-sm text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none resize-none"
-              />
-              <p className="text-[10px] text-[#8A938D] mt-2 text-right font-bold uppercase tracking-wider">{notes.length} characters</p>
-            </div>
 
             {/* ── Final Decision ───────────────────────────────────────────── */}
             <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-6 shadow-xl">

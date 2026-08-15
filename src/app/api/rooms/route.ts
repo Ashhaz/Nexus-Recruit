@@ -25,7 +25,11 @@ export async function GET() {
 
     const rooms = await InterviewRoom.find()
       .sort({ roomNumber: 1 })
-      .populate("applicant", "name rollNumber")
+      .populate({
+        path: "applicant",
+        model: Applicant,
+        select: "name rollNumber",
+      })
       .lean();
 
     return NextResponse.json({ success: true, rooms });

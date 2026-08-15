@@ -72,6 +72,7 @@ export async function GET(request: Request) {
         phone: (applicant as any).phone ?? null,
         responses: (applicant as any).responses ?? {},
         interviewDuration: (applicant as any).interviewDuration ?? 0,
+        interviewNotes: (applicant as any).interviewNotes ?? "",
       },
     });
   } catch (error: any) {

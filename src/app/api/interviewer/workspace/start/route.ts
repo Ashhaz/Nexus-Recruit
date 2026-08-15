@@ -25,10 +25,18 @@ export async function POST(request: Request) {
     }
 
     // Validate that the room is registered to the correct physical interviewer
-    if (room.status !== "Occupied" || room.interviewerId !== interviewerId || room.interviewer !== interviewerName) {
+    if (room.interviewerId !== interviewerId || room.interviewer !== interviewerName) {
       return NextResponse.json(
         { success: false, error: "YOU ARE NOT AUTHORIZED FOR THIS ROOM" },
         { status: 403 }
+      );
+    }
+
+    // Reject the start request if the room already has an active applicant
+    if (room.applicant !== null) {
+      return NextResponse.json(
+        { success: false, error: "THIS ROOM ALREADY HAS AN ACTIVE INTERVIEW" },
+        { status: 409 }
       );
     }
 
