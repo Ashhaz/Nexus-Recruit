@@ -398,13 +398,23 @@ export default function ActiveInterviewPage() {
                 
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-6 pt-4">
                   {(() => {
-                    const filteredResponses = Object.entries(data.applicant.responses || {}).filter(([key]) => {
+                    const filteredResponses = Object.entries(data.applicant.responses || {}).filter(([key, value]) => {
                       const normalizedKey = key
                         .trim()
                         .toLowerCase()
                         .replace(/\s+/g, " ")
                         .replace(/\s*[:：]\s*$/, "");
-                      return !excludedKeys.has(normalizedKey);
+                      
+                      if (excludedKeys.has(normalizedKey)) {
+                        return false;
+                      }
+
+                      if (value == null) return false;
+                      if (typeof value === "string" && value.trim() === "") {
+                        return false;
+                      }
+
+                      return true;
                     });
 
                     if (filteredResponses.length === 0) {
