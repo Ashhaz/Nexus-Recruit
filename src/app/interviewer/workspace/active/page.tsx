@@ -44,6 +44,20 @@ function formatTime(totalSeconds: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+const excludedKeys = new Set([
+  "name",
+  "gender",
+  "roll number",
+  "roll number : example: 23081a7301",
+  "year of studying",
+  "branch",
+  "email address",
+  "contact number",
+  "contact number (no +91 or gaps)",
+  "contact number (🚫 no +91 or gaps)",
+  "timestamp"
+]);
+
 export default function ActiveInterviewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -383,19 +397,32 @@ export default function ActiveInterviewPage() {
                 </div>
                 
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-6 pt-4">
-                  {data.applicant.responses && Object.keys(data.applicant.responses).length > 0 ? (
-                    Object.entries(data.applicant.responses).map(([question, answer], idx) => (
+                  {(() => {
+                    const filteredResponses = Object.entries(data.applicant.responses || {}).filter(([key]) => {
+                      const normalizedKey = key
+                        .trim()
+                        .toLowerCase()
+                        .replace(/\s+/g, " ")
+                        .replace(/\s*[:：]\s*$/, "");
+                      return !excludedKeys.has(normalizedKey);
+                    });
+
+                    if (filteredResponses.length === 0) {
+                      return (
+                        <div className="text-center py-20 text-[#8A938D]">
+                          <span className="material-symbols-outlined text-4xl opacity-50 mb-3">feed</span>
+                          <p className="text-xs font-bold uppercase tracking-wider">No responses available.</p>
+                        </div>
+                      );
+                    }
+
+                    return filteredResponses.map(([question, answer], idx) => (
                       <div key={idx} className="space-y-2 border-b border-[#1D2A22]/50 pb-4 last:border-0 last:pb-0">
                         <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-widest break-words">{question}</p>
                         <p className="text-sm text-[#F5F5F5] leading-relaxed break-words">{answer || "—"}</p>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-20 text-[#8A938D]">
-                      <span className="material-symbols-outlined text-4xl opacity-50 mb-3">feed</span>
-                      <p className="text-xs font-bold uppercase tracking-wider">No responses available.</p>
-                    </div>
-                  )}
+                    ));
+                  })()}
                 </div>
               </section>
 

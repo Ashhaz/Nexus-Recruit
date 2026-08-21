@@ -92,7 +92,7 @@ export default function InterviewerDashboardPage() {
               <p className="text-[9px] text-[#8A938D] font-bold uppercase tracking-widest">Interviewer Portal</p>
             </div>
           </div>
-          <SignOutButton>
+          <SignOutButton redirectUrl="/login">
             <button className="text-xs font-bold uppercase tracking-wider text-[#8A938D] hover:text-[#FF4D4D] transition-colors flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">logout</span>
               Logout
