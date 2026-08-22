@@ -24,9 +24,9 @@ export async function POST(request: Request) {
     }
 
     const session = await getAuthSession();
-    if (session.role !== "interviewer") {
+    if (session.role !== "interviewer" && session.role !== "admin") {
       return NextResponse.json(
-        { success: false, error: "Forbidden: interviewers only" },
+        { success: false, error: "Forbidden: unauthorized role" },
         { status: 403 }
       );
     }

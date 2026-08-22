@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import LogoutButton from "@/components/ui/LogoutButton";
@@ -8,13 +8,21 @@ import CustomCursor from "@/components/ui/CustomCursor";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-interface StatsData {
-  totalApplicants: number | null;
-  waiting: number | null;
-  interviewing: number | null;
-  approved: number | null;
-  pending: number | null;
-  discussionNeeded: number | null;
+interface ApplicantData {
+  _id: string;
+  name: string;
+  rollNumber: string;
+  department?: string;
+  branch?: string;
+  year?: string;
+  email?: string;
+  phone?: string;
+  interviewStatus: "Waiting" | "Interviewing" | "Approved" | "Pending" | "Discussion Needed";
+  assignedRoom?: number | null;
+  assignedInterviewer?: string;
+  interviewDuration?: number;
+  finalDecision?: string;
+  interviewNotes?: string;
 }
 
 interface ApplicantResult {
@@ -32,57 +40,74 @@ interface RoomData {
   startedAt: string | null;
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatTime(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  if (h > 0)
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function AdminDashboardPage() {
   const pathname = usePathname();
   const router = useRouter();
+  const detailsRef = useRef<HTMLDivElement>(null);
 
-  // ── Sync ──────────────────────────────────────────────────────────────────
+  // ── Sync & Notifications ──────────────────────────────────────────────────
   const [isSyncing, setIsSyncing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
-  const [stats, setStats] = useState<StatsData>({
-    totalApplicants: null,
-    waiting: null,
-    interviewing: null,
-    approved: null,
-    pending: null,
-    discussionNeeded: null,
-  });
-  const [statsLoading, setStatsLoading] = useState(true);
-
-  // ── Rooms ─────────────────────────────────────────────────────────────────
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [applicants, setApplicants] = useState<ApplicantData[]>([]);
+  const [applicantsLoading, setApplicantsLoading] = useState(true);
   const [rooms, setRooms] = useState<RoomData[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Admin Identity Selection State ─────────────────────────────────────────
+  const [identities, setIdentities] = useState<{ id: string; name: string }[]>([]);
+  const [selectedIdentities, setSelectedIdentities] = useState<Record<number, string>>({});
+  const [registeringRoom, setRegisteringRoom] = useState<number | null>(null);
+
+  // ── Interactive Controls ──────────────────────────────────────────────────
+  const [activeCard, setActiveCard] = useState<"total" | "waiting" | "interviewing" | "approved" | "pending" | "discussion" | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 6000);
   };
 
-  const fetchStats = useCallback(async () => {
-    setStatsLoading(true);
+  const fetchApplicants = useCallback(async (isBackground = false) => {
+    if (!isBackground) {
+      setApplicantsLoading(true);
+    }
     try {
-      const res = await fetch("/api/dashboard/stats");
+      const res = await fetch("/api/dashboard/applicants");
       const json = await res.json();
-      if (json.success && json.data) {
-        setStats(json.data);
-      } else {
-        setStats({ totalApplicants: null, waiting: null, interviewing: null, approved: null, pending: null, discussionNeeded: null });
+      if (json.success && json.applicants) {
+        setApplicants(json.applicants);
+        const now = new Date();
+        setLastUpdated(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       }
-    } catch {
-      setStats({ totalApplicants: null, waiting: null, interviewing: null, approved: null, pending: null, discussionNeeded: null });
+    } catch (e) {
+      console.error("Error fetching dashboard applicants:", e);
     } finally {
-      setStatsLoading(false);
+      if (!isBackground) {
+        setApplicantsLoading(false);
+      }
     }
   }, []);
 
-  const fetchRooms = useCallback(async () => {
-    setRoomsLoading(true);
+  const fetchRooms = useCallback(async (isBackground = false) => {
+    if (!isBackground) {
+      setRoomsLoading(true);
+    }
     try {
       const res = await fetch("/api/rooms");
       const json = await res.json();
@@ -92,19 +117,46 @@ export default function AdminDashboardPage() {
     } catch {
       // silently keep previous state
     } finally {
-      setRoomsLoading(false);
+      if (!isBackground) {
+        setRoomsLoading(false);
+      }
+    }
+  }, []);
+
+  const fetchIdentities = useCallback(async () => {
+    try {
+      const res = await fetch("/api/interviewer/identities");
+      const json = await res.json();
+      if (json.success && json.identities) {
+        setIdentities(json.identities);
+      }
+    } catch (e) {
+      console.error("Error fetching interviewer identities:", e);
     }
   }, []);
 
   useEffect(() => {
-    fetchStats();
-    fetchRooms();
+    fetchApplicants(false);
+    fetchRooms(false);
+    fetchIdentities();
     const interval = setInterval(() => {
-      fetchStats();
-      fetchRooms();
-    }, 15000);
+      fetchApplicants(true);
+      fetchRooms(true);
+    }, 10000);
     return () => clearInterval(interval);
-  }, [fetchStats, fetchRooms]);
+  }, [fetchApplicants, fetchRooms, fetchIdentities]);
+
+  // Scroll to bottom expanded list automatically when state changes to an active card
+  useEffect(() => {
+    if (activeCard) {
+      setTimeout(() => {
+        detailsRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    }
+  }, [activeCard]);
 
   // ── Sync handler ──────────────────────────────────────────────────────────
 
@@ -118,13 +170,12 @@ export default function AdminDashboardPage() {
         throw new Error(data.error || "Failed to sync applicants");
       }
 
-      router.refresh();
-
       showToast(
         `Sync Complete!\nImported: ${data.imported}\nUpdated: ${data.updated}\nFailed: ${data.skipped}`,
         "success"
       );
-      fetchStats();
+      fetchApplicants(false);
+      fetchRooms(false);
     } catch (error: any) {
       showToast(error.message || "An unexpected error occurred", "error");
     } finally {
@@ -132,16 +183,125 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // ── Needs Attention Click handler ──────────────────────────────────────────
+
+  const handleNeedsAttentionClick = (card: "pending" | "discussion" | "waiting") => {
+    setActiveCard(card);
+  };
+
+  // ── Admin Enter Available Room Logic ───────────────────────────────────────
+
+  const handleEnterRoom = async (roomNumber: number) => {
+    const interviewerName = selectedIdentities[roomNumber];
+    if (!interviewerName) {
+      showToast("Please select an interviewer identity first.", "error");
+      return;
+    }
+
+    setRegisteringRoom(roomNumber);
+    try {
+      const res = await fetch("/api/interviewer/workspace/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomNumber,
+          interviewerName,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        throw new Error(json.error || "Failed to register room");
+      }
+      localStorage.setItem(`nexus_admin_conducting_${roomNumber}`, "true");
+      router.push(`/interviewer/workspace/select?room=${roomNumber}`);
+    } catch (e: any) {
+      showToast(e.message || "An error occurred", "error");
+    } finally {
+      setRegisteringRoom(null);
+    }
+  };
+
+  // ── Single Source of Truth Calculations ────────────────────────────────────
+
+  const totalCount = applicants.length;
+  const waitingCount = applicants.filter((a) => a.interviewStatus === "Waiting").length;
+  const interviewingCount = applicants.filter((a) => a.interviewStatus === "Interviewing").length;
+  const approvedCount = applicants.filter((a) => a.interviewStatus === "Approved").length;
+  const pendingCount = applicants.filter((a) => a.interviewStatus === "Pending").length;
+  const discussionCount = applicants.filter((a) => a.interviewStatus === "Discussion Needed").length;
+
+  // Filtered applicants for expanded view card
+  const filteredApplicantsByCard = (() => {
+    let list: ApplicantData[] = [];
+    switch (activeCard) {
+      case "total":
+        list = applicants;
+        break;
+      case "waiting":
+        list = applicants.filter((a) => a.interviewStatus === "Waiting");
+        break;
+      case "interviewing":
+        list = applicants.filter((a) => a.interviewStatus === "Interviewing");
+        break;
+      case "approved":
+        list = applicants.filter((a) => a.interviewStatus === "Approved");
+        break;
+      case "pending":
+        list = applicants.filter((a) => a.interviewStatus === "Pending");
+        break;
+      case "discussion":
+        list = applicants.filter((a) => a.interviewStatus === "Discussion Needed");
+        break;
+      default:
+        return [];
+    }
+
+    if (activeCard === "total" && searchQuery.trim() !== "") {
+      const q = searchQuery.toLowerCase().trim();
+      return list.filter(
+        (a) => a.name.toLowerCase().includes(q) || a.rollNumber.toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  })();
+
   // ── Room card helper ──────────────────────────────────────────────────────
 
   const RoomCard = ({ room }: { room: RoomData }) => {
-    const isOccupied = room.status === "Occupied";
+    const hasActiveInterview = room.status === "Occupied" && room.applicant !== null;
+    const isRegistered = room.interviewer !== "" && room.interviewer !== undefined && room.interviewer !== null;
     const formattedRoomNumber = String(room.roomNumber).padStart(2, "0");
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [elapsed, setElapsed] = useState(0);
+
+    useEffect(() => {
+      if (!hasActiveInterview || !room.startedAt) return;
+      const updateElapsed = () => {
+        const ms = Date.now() - new Date(room.startedAt!).getTime();
+        setElapsed(Math.max(0, Math.floor(ms / 1000)));
+      };
+      updateElapsed();
+      const interval = setInterval(updateElapsed, 1000);
+      return () => clearInterval(interval);
+    }, [hasActiveInterview, room.startedAt]);
+
+    const handleEnterBtnClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const interviewerName = selectedIdentities[room.roomNumber];
+      if (!interviewerName) {
+        setIsExpanded(true);
+        showToast("Please select an interviewer identity first.", "error");
+        return;
+      }
+      handleEnterRoom(room.roomNumber);
+    };
 
     return (
       <div 
-        className={`bg-[#101412] p-6 rounded-xl flex flex-col gap-5 border transition-all duration-300 shadow-xl relative overflow-hidden group hover:-translate-y-1 ${
-          isOccupied 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={`bg-[#101412] p-6 rounded-xl flex flex-col gap-4 border transition-all duration-300 shadow-xl relative overflow-hidden cursor-pointer group ${
+          hasActiveInterview 
             ? "border-[#00FF66]/30 hover:border-[#00FF66]/60 shadow-[0_0_15px_rgba(0,255,102,0.05)]" 
             : "border-[#1D2A22] hover:border-[#8A938D]/30"
         }`}
@@ -154,57 +314,155 @@ export default function AdminDashboardPage() {
           <h4 className="text-sm font-bold text-[#F5F5F5] tracking-widest uppercase">ROOM {formattedRoomNumber}</h4>
           <span
             className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
-              isOccupied
+              hasActiveInterview
                 ? "bg-[#00FF66]/10 text-[#00FF66]"
                 : "bg-[#8A938D]/10 text-[#8A938D]"
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${isOccupied ? "bg-[#00FF66] animate-pulse" : "bg-[#8A938D]"}`}></span>
-            {isOccupied ? "LIVE" : "AVAILABLE"}
+            <span className={`w-1.5 h-1.5 rounded-full ${hasActiveInterview ? "bg-[#00FF66] animate-pulse" : "bg-[#8A938D]"}`}></span>
+            {hasActiveInterview ? "LIVE" : isRegistered ? "REGISTERED" : "AVAILABLE"}
           </span>
         </div>
 
-        <div className="space-y-4 z-10 flex-1">
-          {isOccupied ? (
-            <>
-              <div>
-                <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider mb-1">
-                  Interviewer
+        <div className="z-10 flex-1">
+          {!isExpanded ? (
+            <div className="space-y-1">
+              <p className="text-[10px] text-[#8A938D] font-black uppercase tracking-wider">
+                {hasActiveInterview ? "Active Interview" : "Status"}
+              </p>
+              <p className="text-xs font-semibold text-[#F5F5F5]">
+                {hasActiveInterview ? (room.applicant?.name || "—") : isRegistered ? "Registered" : "Ready for Interview"}
+              </p>
+              {hasActiveInterview && room.applicant && (
+                <p className="text-[10px] font-mono text-[#8A938D]">
+                  {room.applicant.rollNumber}
                 </p>
-                <p className="text-sm font-semibold text-[#F5F5F5]">
-                  {room.interviewer || "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider mb-1">
-                  Candidate
-                </p>
-                {room.applicant ? (
-                  <>
-                    <p className="text-sm font-bold text-[#00FF66]">{room.applicant.name}</p>
-                    <p className="text-xs text-[#8A938D] font-mono mt-0.5">{room.applicant.rollNumber}</p>
-                  </>
-                ) : (
-                  <p className="text-sm font-medium text-[#8A938D]">—</p>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="py-6 flex flex-col items-center justify-center text-center gap-2 border border-dashed border-[#1D2A22] rounded-lg bg-[#0B0D0C]/40">
-              <span className="material-symbols-outlined text-xl text-[#8A938D]/40">check_circle</span>
-              <p className="text-[11px] font-bold text-[#8A938D] uppercase tracking-wider">Ready for Interview</p>
-              <p className="text-[9px] text-[#8A938D]/60 max-w-[160px] leading-tight">Waiting for interviewer to join room</p>
+              )}
             </div>
+          ) : (
+            <>
+              {hasActiveInterview && (
+                <div className="space-y-3 pt-2 border-t border-[#1D2A22]/50 animate-in fade-in duration-300">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">STATUS</p>
+                      <p className="font-bold text-[#F5F5F5]">LIVE</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">INTERVIEWER</p>
+                      <p className="font-bold text-[#F5F5F5] truncate">{room.interviewer || "—"}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">CANDIDATE</p>
+                        <p className="font-bold text-[#00FF66]">{room.applicant?.name || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">ROLL NUMBER</p>
+                        <p className="font-bold font-mono text-[#F5F5F5]">{room.applicant?.rollNumber || "—"}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">INTERVIEW DURATION</p>
+                      <p className="font-bold font-mono text-[#00FF66] text-sm">{formatTime(elapsed)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!hasActiveInterview && isRegistered && (
+                <div className="space-y-3 pt-2 border-t border-[#1D2A22]/50 animate-in fade-in duration-300">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">STATUS</p>
+                      <p className="font-bold text-[#F5F5F5]">REGISTERED</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">INTERVIEWER</p>
+                      <p className="font-bold text-[#F5F5F5] truncate">{room.interviewer || "—"}</p>
+                    </div>
+                  </div>
+                  <div className="text-xs pt-1">
+                    <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">ACTIVE INTERVIEW</p>
+                    <p className="font-semibold text-[#8A938D]">NO ACTIVE INTERVIEW</p>
+                  </div>
+                </div>
+              )}
+
+              {!hasActiveInterview && !isRegistered && (
+                <div className="space-y-3 pt-2 border-t border-[#1D2A22]/50 animate-in fade-in duration-300">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">STATUS</p>
+                      <p className="font-bold text-[#F5F5F5]">AVAILABLE</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">INTERVIEWER</p>
+                      <p className="font-bold text-[#F5F5F5]">NONE</p>
+                    </div>
+                  </div>
+                  <div className="text-xs pt-1 space-y-2">
+                    <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">ACTIVE INTERVIEW</p>
+                    <p className="font-semibold text-[#8A938D]">NO ACTIVE INTERVIEW</p>
+                    
+                    <div className="pt-2 space-y-1.5 border-t border-[#1D2A22]/30" onClick={(e) => e.stopPropagation()}>
+                      <label className="text-[9px] text-[#8A938D] font-black uppercase tracking-widest block">
+                        Select Physical Identity
+                      </label>
+                      <select
+                        value={selectedIdentities[room.roomNumber] || ""}
+                        onChange={(e) => setSelectedIdentities({
+                          ...selectedIdentities,
+                          [room.roomNumber]: e.target.value
+                        })}
+                        className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-2.5 py-1.5 text-[11px] text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors font-bold uppercase tracking-wider"
+                      >
+                        <option value="" disabled>-- Choose Interviewer --</option>
+                        {identities.map((id) => (
+                          <option key={id.id} value={id.name}>{id.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        <Link
-          href={`/interviewer/workspace?room=${room.roomNumber}`}
-          className="mt-4 w-full py-2.5 bg-[#0B0D0C] hover:bg-[#00FF66] hover:text-[#050505] rounded-lg text-[10px] font-bold uppercase tracking-wider text-[#F5F5F5] transition-all border border-[#1D2A22] z-10 flex items-center justify-center gap-2 group-hover:border-[#00FF66]/30 shadow-md"
-        >
-          <span className="material-symbols-outlined text-[14px]">visibility</span>
-          View Room
-        </Link>
+        <div className="flex gap-2 mt-2 z-10" onClick={(e) => e.stopPropagation()}>
+          {hasActiveInterview ? (
+            <Link
+              href={`/interviewer/workspace/active?room=${room.roomNumber}`}
+              className="flex-1 py-2 bg-[#0B0D0C] hover:bg-[#00FF66] hover:text-[#050505] rounded-lg text-[10px] font-bold uppercase tracking-wider text-[#F5F5F5] transition-all border border-[#1D2A22] flex items-center justify-center gap-1.5 shadow-md"
+            >
+              <span className="material-symbols-outlined text-[13px]">visibility</span>
+              View Interview
+            </Link>
+          ) : (
+            <button
+              onClick={isRegistered ? () => {
+                localStorage.setItem(`nexus_admin_conducting_${room.roomNumber}`, "true");
+                router.push(`/interviewer/workspace/select?room=${room.roomNumber}`);
+              } : handleEnterBtnClick}
+              disabled={registeringRoom === room.roomNumber}
+              className="flex-1 py-2 bg-[#00FF66] hover:bg-[#00E55C] text-[#050505] rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border border-[#00FF66]/20 flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[13px]">login</span>
+              {registeringRoom === room.roomNumber ? "Entering..." : "Enter Room"}
+            </button>
+          )}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="px-3 py-2 bg-[#0B0D0C] hover:bg-[#101412] border border-[#1D2A22] rounded-lg text-[10px] font-bold text-[#8A938D] hover:text-[#F5F5F5] transition-colors"
+          >
+            <span className="material-symbols-outlined text-[14px]">
+              {isExpanded ? "expand_less" : "expand_more"}
+            </span>
+          </button>
+        </div>
       </div>
     );
   };
@@ -296,7 +554,18 @@ export default function AdminDashboardPage() {
           {/* Page Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-black tracking-wide text-[#F5F5F5] uppercase">System Dashboard</h2>
+              <div className="flex items-center flex-wrap gap-2">
+                <h2 className="text-2xl font-black tracking-wide text-[#F5F5F5] uppercase">System Dashboard</h2>
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#00FF66]/10 text-[#00FF66] text-[8px] font-bold tracking-widest uppercase animate-pulse">
+                  <span className="w-1 h-1 rounded-full bg-[#00FF66]"></span>
+                  Live
+                </span>
+                {lastUpdated && (
+                  <span className="text-[9px] text-[#8A938D]/60 font-mono tracking-wider">
+                    UPDATED: {lastUpdated}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-[#8A938D] mt-1 font-semibold uppercase tracking-wider">Real-time recruitment performance &amp; room telemetry.</p>
             </div>
             <div className="flex items-center gap-3 mt-4 md:mt-0">
@@ -320,49 +589,87 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Metric Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {/* Total Applicants */}
-            <div className="bg-[#101412] p-5 rounded-xl border border-[#1D2A22] flex flex-col gap-1 hover:border-[#00FF66]/30 transition-all duration-300 shadow-md">
-              <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Total Apps</span>
-              <span className="text-4xl font-black text-[#F5F5F5] tracking-tight">{statsLoading ? '…' : (stats.totalApplicants ?? '--')}</span>
-              <div className="w-full h-1 bg-[#0B0D0C] rounded-full mt-2 overflow-hidden">
-                <div className="h-full bg-[#00FF66] w-full rounded-full shadow-[0_0_8px_rgba(0,255,102,0.5)]"></div>
+          {/* 1. RECRUITMENT OVERVIEW */}
+          <div className="space-y-4">
+            <div className="border-b border-[#1D2A22] pb-3">
+              <h3 className="text-sm font-black text-[#F5F5F5] uppercase tracking-widest flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">analytics</span>
+                Recruitment Overview
+              </h3>
+            </div>
+
+            {/* Metric Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {/* Total Applications */}
+              <div 
+                onClick={() => setActiveCard(activeCard === "total" ? null : "total")}
+                className={`p-5 rounded-xl border flex flex-col gap-1 transition-all duration-300 shadow-md cursor-pointer bg-[#101412] ${
+                  activeCard === "total" ? "border-[#00FF66] shadow-[0_0_15px_rgba(0,255,102,0.1)]" : "border-[#1D2A22] hover:border-[#00FF66]/30"
+                }`}
+              >
+                <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Total Applications</span>
+                <span className="text-4xl font-black text-[#F5F5F5] tracking-tight">{applicantsLoading ? '…' : totalCount}</span>
+                <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">All Candidates</p>
               </div>
-            </div>
-            {/* Waiting */}
-            <div className="bg-[#101412] p-5 rounded-xl border border-[#1D2A22] flex flex-col gap-1 hover:border-[#00FF66]/30 transition-all duration-300 shadow-md">
-              <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Waiting</span>
-              <span className="text-4xl font-black text-[#8A938D] tracking-tight">{statsLoading ? '…' : (stats.waiting ?? '--')}</span>
-              <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">In queue</p>
-            </div>
-            {/* Currently Interviewing */}
-            <div className="bg-[#101412] p-5 rounded-xl border border-[#00FF66]/20 flex flex-col gap-1 hover:border-[#00FF66]/40 transition-all duration-300 shadow-md">
-              <span className="text-[9px] font-black text-[#00FF66] uppercase tracking-widest">Interviewing</span>
-              <span className="text-4xl font-black text-[#00FF66] tracking-tight">{statsLoading ? '…' : (stats.interviewing ?? '--')}</span>
-              <p className="text-[9px] text-[#00FF66]/70 mt-1 uppercase font-bold tracking-wider animate-pulse">Live Rooms</p>
-            </div>
-            {/* Approved */}
-            <div className="bg-[#101412] p-5 rounded-xl border border-[#1D2A22] flex flex-col gap-1 hover:border-[#00FF66]/30 transition-all duration-300 shadow-md">
-              <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Approved</span>
-              <span className="text-4xl font-black text-[#00FF66] tracking-tight">{statsLoading ? '…' : (stats.approved ?? '--')}</span>
-              <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">Completed</p>
-            </div>
-            {/* Pending */}
-            <div className="bg-[#101412] p-5 rounded-xl border border-[#1D2A22] flex flex-col gap-1 hover:border-[#00FF66]/30 transition-all duration-300 shadow-md">
-              <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Pending</span>
-              <span className="text-4xl font-black text-[#FFB020] tracking-tight">{statsLoading ? '…' : (stats.pending ?? '--')}</span>
-              <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">Review</p>
-            </div>
-            {/* Attention */}
-            <div className="bg-[#101412] p-5 rounded-xl border border-[#1D2A22] flex flex-col gap-1 hover:border-[#00FF66]/30 transition-all duration-300 shadow-md">
-              <span className="text-[9px] font-black text-[#FF4D4D] uppercase tracking-widest">Attention</span>
-              <span className="text-4xl font-black text-[#FF4D4D] tracking-tight">{statsLoading ? '…' : (stats.discussionNeeded ?? '--')}</span>
-              <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">Conflict</p>
+              {/* Waiting */}
+              <div 
+                onClick={() => setActiveCard(activeCard === "waiting" ? null : "waiting")}
+                className={`p-5 rounded-xl border flex flex-col gap-1 transition-all duration-300 shadow-md cursor-pointer bg-[#101412] ${
+                  activeCard === "waiting" ? "border-[#00FF66] shadow-[0_0_15px_rgba(0,255,102,0.1)]" : "border-[#1D2A22] hover:border-[#00FF66]/30"
+                }`}
+              >
+                <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Waiting</span>
+                <span className="text-4xl font-black text-[#8A938D] tracking-tight">{applicantsLoading ? '…' : waitingCount}</span>
+                <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">In Queue</p>
+              </div>
+              {/* Currently Interviewing */}
+              <div 
+                onClick={() => setActiveCard(activeCard === "interviewing" ? null : "interviewing")}
+                className={`p-5 rounded-xl border flex flex-col gap-1 transition-all duration-300 shadow-md cursor-pointer bg-[#101412] ${
+                  activeCard === "interviewing" ? "border-[#00FF66] shadow-[0_0_15px_rgba(0,255,102,0.15)]" : "border-[#00FF66]/20 hover:border-[#00FF66]/40"
+                }`}
+              >
+                <span className="text-[9px] font-black text-[#00FF66] uppercase tracking-widest">Interviewing</span>
+                <span className="text-4xl font-black text-[#00FF66] tracking-tight">{applicantsLoading ? '…' : interviewingCount}</span>
+                <p className="text-[9px] text-[#00FF66]/70 mt-1 uppercase font-bold tracking-wider animate-pulse">Live Interviews</p>
+              </div>
+              {/* Approved */}
+              <div 
+                onClick={() => setActiveCard(activeCard === "approved" ? null : "approved")}
+                className={`p-5 rounded-xl border flex flex-col gap-1 transition-all duration-300 shadow-md cursor-pointer bg-[#101412] ${
+                  activeCard === "approved" ? "border-[#00FF66] shadow-[0_0_15px_rgba(0,255,102,0.1)]" : "border-[#1D2A22] hover:border-[#00FF66]/30"
+                }`}
+              >
+                <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Approved</span>
+                <span className="text-4xl font-black text-[#00FF66] tracking-tight">{applicantsLoading ? '…' : approvedCount}</span>
+                <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">Completed</p>
+              </div>
+              {/* Pending */}
+              <div 
+                onClick={() => setActiveCard(activeCard === "pending" ? null : "pending")}
+                className={`p-5 rounded-xl border flex flex-col gap-1 transition-all duration-300 shadow-md cursor-pointer bg-[#101412] ${
+                  activeCard === "pending" ? "border-[#00FF66] shadow-[0_0_15px_rgba(0,255,102,0.1)]" : "border-[#1D2A22] hover:border-[#00FF66]/30"
+                }`}
+              >
+                <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Pending</span>
+                <span className="text-4xl font-black text-[#FFB020] tracking-tight">{applicantsLoading ? '…' : pendingCount}</span>
+                <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">Review Required</p>
+              </div>
+              {/* Discussion Needed */}
+              <div 
+                onClick={() => setActiveCard(activeCard === "discussion" ? null : "discussion")}
+                className={`p-5 rounded-xl border flex flex-col gap-1 transition-all duration-300 shadow-md cursor-pointer bg-[#101412] ${
+                  activeCard === "discussion" ? "border-[#FF4D4D] shadow-[0_0_15px_rgba(255,77,77,0.1)]" : "border-[#1D2A22] hover:border-[#FF4D4D]/30"
+                }`}
+              >
+                <span className="text-[9px] font-black text-[#FF4D4D] uppercase tracking-widest">Discussion Needed</span>
+                <span className="text-4xl font-black text-[#FF4D4D] tracking-tight">{applicantsLoading ? '…' : discussionCount}</span>
+                <p className="text-[9px] text-[#8A938D]/60 mt-1 uppercase font-bold tracking-wider">Requires Discussion</p>
+              </div>
             </div>
           </div>
 
-          {/* Rooms Section (Full width row, displaying exactly 3 columns side-by-side on desktop) */}
+          {/* 2. INTERVIEW ROOMS STATUS */}
           <div className="space-y-4">
             <div className="border-b border-[#1D2A22] pb-3">
               <h3 className="text-sm font-black text-[#F5F5F5] uppercase tracking-widest flex items-center gap-2">
@@ -390,71 +697,214 @@ export default function AdminDashboardPage() {
             )}
           </div>
 
-          {/* Quick Actions & Recent Activity (Bottom Row) */}
+          {/* 3. NEEDS ATTENTION & 4. RECRUITMENT BREAKDOWN */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            {/* Quick Actions (1/3 Width) */}
-            <div className="bg-[#101412] p-6 rounded-xl border border-[#1D2A22] shadow-md h-full">
-              <h3 className="text-[10px] font-black text-[#F5F5F5] uppercase tracking-widest border-b border-[#1D2A22] pb-3 mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#00FF66] text-base">bolt</span>
-                Quick Actions
+            {/* Needs Attention (1/3 Width) */}
+            <div className="bg-[#101412] p-6 rounded-xl border border-[#1D2A22] shadow-md h-full space-y-4">
+              <h3 className="text-[10px] font-black text-[#F5F5F5] uppercase tracking-widest border-b border-[#1D2A22] pb-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#FF4D4D] text-base">warning</span>
+                Needs Attention
               </h3>
-              <div className="flex flex-col gap-2.5">
-                <button
-                  onClick={handleSync}
-                  disabled={isSyncing}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#0B0D0C] hover:bg-[#00FF66]/10 hover:text-[#00FF66] hover:border-[#00FF66]/40 border border-[#1D2A22] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all text-[#F5F5F5] group/btn"
-                >
-                  <span>Sync Applicants</span>
-                  <span className="material-symbols-outlined text-sm transition-transform group-hover/btn:rotate-180 duration-500">sync</span>
-                </button>
-                <Link
-                  href="/admin/applicants"
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#0B0D0C] hover:bg-[#00FF66]/10 hover:text-[#00FF66] hover:border-[#00FF66]/40 border border-[#1D2A22] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all text-[#F5F5F5]"
-                >
-                  <span>View All Applicants</span>
-                  <span className="material-symbols-outlined text-sm">group</span>
-                </Link>
-                <Link
-                  href="/admin/rooms"
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#0B0D0C] hover:bg-[#00FF66]/10 hover:text-[#00FF66] hover:border-[#00FF66]/40 border border-[#1D2A22] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all text-[#F5F5F5]"
-                >
-                  <span>Rooms Status Overview</span>
-                  <span className="material-symbols-outlined text-sm">terminal</span>
-                </Link>
-                <Link
-                  href="/admin/results"
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#0B0D0C] hover:bg-[#00FF66]/10 hover:text-[#00FF66] hover:border-[#00FF66]/40 border border-[#1D2A22] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all text-[#F5F5F5]"
-                >
-                  <span>Check Results</span>
-                  <span className="material-symbols-outlined text-sm">assignment_turned_in</span>
-                </Link>
+              <div className="flex flex-col gap-2.5 pt-2">
+                {pendingCount > 0 && (
+                  <button
+                    onClick={() => handleNeedsAttentionClick("pending")}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-[#0B0D0C] hover:bg-[#FFB020]/10 hover:text-[#FFB020] hover:border-[#FFB020]/40 border border-[#1D2A22] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all text-[#F5F5F5]"
+                  >
+                    <span>{pendingCount} Pending Decisions</span>
+                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                  </button>
+                )}
+                {discussionCount > 0 && (
+                  <button
+                    onClick={() => handleNeedsAttentionClick("discussion")}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-[#0B0D0C] hover:bg-[#FF4D4D]/10 hover:text-[#FF4D4D] hover:border-[#FF4D4D]/40 border border-[#FF4D4D]/20 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all text-[#FF4D4D] animate-pulse"
+                  >
+                    <span>{discussionCount} Discussion Needed</span>
+                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                  </button>
+                )}
+                {waitingCount > 0 && (
+                  <button
+                    onClick={() => handleNeedsAttentionClick("waiting")}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-[#0B0D0C] hover:bg-[#00FF66]/10 hover:text-[#00FF66] hover:border-[#00FF66]/40 border border-[#1D2A22] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all text-[#F5F5F5]"
+                  >
+                    <span>{waitingCount} Candidates Waiting</span>
+                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                  </button>
+                )}
+                {pendingCount === 0 && discussionCount === 0 && waitingCount === 0 && (
+                  <p className="text-xs text-[#8A938D] font-semibold py-6 text-center uppercase tracking-wider">
+                    All clear. No items require attention.
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Recent Activity Empty State (2/3 Width) */}
-            <div className="lg:col-span-2 bg-[#101412] p-6 rounded-xl border border-[#1D2A22] shadow-md h-full flex flex-col justify-between">
-              <div>
-                <h3 className="text-[10px] font-black text-[#F5F5F5] uppercase tracking-widest border-b border-[#1D2A22] pb-3 mb-4 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#00FF66] text-base">event_note</span>
-                  Recent Operations Log
-                </h3>
-              </div>
-              <div className="py-12 flex flex-col items-center justify-center text-center gap-2.5 text-[#8A938D]">
-                <div className="w-12 h-12 rounded-full bg-[#0B0D0C] border border-[#1D2A22] flex items-center justify-center text-[#8A938D]/40">
-                  <span className="material-symbols-outlined text-2xl">receipt_long</span>
-                </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-[#F5F5F5]/80">No recent activities logged</span>
-                <span className="text-[10px] text-[#8A938D]/60 max-w-[280px] leading-relaxed">System events and real-time synchronization updates will populate here as operations are run.</span>
+            {/* Recruitment Breakdown (2/3 Width) */}
+            <div className="lg:col-span-2 bg-[#101412] p-6 rounded-xl border border-[#1D2A22] shadow-md h-full space-y-6">
+              <h3 className="text-[10px] font-black text-[#F5F5F5] uppercase tracking-widest border-b border-[#1D2A22] pb-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#00FF66] text-base">bar_chart</span>
+                Recruitment Breakdown
+              </h3>
+              
+              <div className="space-y-4 pt-2">
+                {[
+                  { label: "Waiting Queue", count: waitingCount, color: "bg-[#8A938D]", pct: totalCount > 0 ? (waitingCount / totalCount) * 100 : 0 },
+                  { label: "Live Interviews", count: interviewingCount, color: "bg-[#00FF66]", pct: totalCount > 0 ? (interviewingCount / totalCount) * 100 : 0 },
+                  { label: "Approved Candidates", count: approvedCount, color: "bg-[#00FF66] shadow-[0_0_8px_rgba(0,255,102,0.4)]", pct: totalCount > 0 ? (approvedCount / totalCount) * 100 : 0 },
+                  { label: "Pending Review", count: pendingCount, color: "bg-[#FFB020]", pct: totalCount > 0 ? (pendingCount / totalCount) * 100 : 0 },
+                  { label: "Discussion Needed", count: discussionCount, color: "bg-[#FF4D4D]", pct: totalCount > 0 ? (discussionCount / totalCount) * 100 : 0 }
+                ].map((item, idx) => (
+                  <div key={idx} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[#8A938D] font-bold uppercase tracking-wider">{item.label}</span>
+                      <span className="text-[#F5F5F5] font-black">
+                        {item.count} <span className="text-[10px] text-[#8A938D]/60 font-semibold">({totalCount > 0 ? Math.round((item.count / totalCount) * 100) : 0}%)</span>
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-[#0B0D0C] rounded-full overflow-hidden border border-[#1D2A22]/30">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${item.color}`}
+                        style={{ width: `${item.pct}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
+
+          {/* 5. EXPANDED STATUS DETAILS (Appears at the very bottom, in normal flow, position: static) */}
+          {activeCard && (
+            <div ref={detailsRef} className="space-y-4 pt-8 border-t border-[#1D2A22] animate-in fade-in duration-300">
+              <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-6 shadow-2xl space-y-4">
+                <div className="flex items-center justify-between border-b border-[#1D2A22] pb-3">
+                  <h3 className="text-sm font-black text-[#F5F5F5] uppercase tracking-widest flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[#00FF66]">
+                      {activeCard === "total" && "analytics"}
+                      {activeCard === "waiting" && "hourglass_empty"}
+                      {activeCard === "interviewing" && "radio_button_checked"}
+                      {activeCard === "approved" && "check_circle"}
+                      {activeCard === "pending" && "pending_actions"}
+                      {activeCard === "discussion" && "report"}
+                    </span>
+                    {activeCard === "total" && `Total Applications · ${filteredApplicantsByCard.length}`}
+                    {activeCard === "waiting" && `Waiting Queue · ${filteredApplicantsByCard.length}`}
+                    {activeCard === "interviewing" && `Live Interviews · ${filteredApplicantsByCard.length}`}
+                    {activeCard === "approved" && `Approved Candidates · ${filteredApplicantsByCard.length}`}
+                    {activeCard === "pending" && `Pending Review · ${filteredApplicantsByCard.length}`}
+                    {activeCard === "discussion" && `Discussion Needed · ${filteredApplicantsByCard.length}`}
+                  </h3>
+                  <button
+                    onClick={() => setActiveCard(null)}
+                    className="p-1 rounded-full text-[#8A938D] hover:text-[#FF4D4D] hover:bg-[#FF4D4D]/10 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-sm font-bold">close</span>
+                  </button>
+                </div>
+
+                {activeCard === "total" && (
+                  <div className="mb-4">
+                    <input
+                      type="text"
+                      placeholder="Search by name or roll number..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full max-w-md bg-[#0B0D0C] border border-[#1D2A22] rounded-lg px-4 py-2.5 text-xs text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:outline-none focus:border-[#00FF66] transition-colors"
+                    />
+                  </div>
+                )}
+
+                <div className="max-h-96 overflow-y-auto custom-scrollbar divide-y divide-[#1D2A22] pr-2">
+                  {filteredApplicantsByCard.length === 0 ? (
+                    <p className="text-xs text-[#8A938D] font-semibold py-8 text-center uppercase tracking-wider">
+                      No candidates in this list.
+                    </p>
+                  ) : (
+                    filteredApplicantsByCard.map((app) => {
+                      const branchDetails = [app.branch || app.department, app.year ? `${app.year} Yr` : ""].filter(Boolean).join(" · ");
+                      return (
+                        <div
+                          key={app._id}
+                          className={`py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 first:pt-0 last:pb-0 ${
+                            activeCard === "discussion" ? "bg-[#1D1111] px-4 rounded-lg my-1 border border-[#FF4D4D]/25" : ""
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <p className="text-sm font-black text-[#F5F5F5] uppercase tracking-wide">
+                              {app.name}
+                            </p>
+                            <p className="text-xs font-mono text-[#8A938D]">
+                              {app.rollNumber}
+                              {activeCard === "waiting" && branchDetails ? ` · ${branchDetails}` : ""}
+                            </p>
+                          </div>
+
+                          <div className="text-right text-xs">
+                            {activeCard === "total" && (
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                                app.interviewStatus === "Approved" ? "bg-[#00FF66]/10 text-[#00FF66]" :
+                                app.interviewStatus === "Pending" ? "bg-[#FFB020]/10 text-[#FFB020]" :
+                                app.interviewStatus === "Discussion Needed" ? "bg-[#FF4D4D]/10 text-[#FF4D4D]" :
+                                app.interviewStatus === "Interviewing" ? "bg-[#00FF66]/20 text-[#00FF66] animate-pulse" :
+                                "bg-[#8A938D]/10 text-[#8A938D]"
+                              }`}>
+                                {app.interviewStatus}
+                              </span>
+                            )}
+                            {activeCard === "waiting" && null}
+                            {activeCard === "interviewing" && (
+                              <div className="space-y-0.5">
+                                <p className="text-[#00FF66] font-bold uppercase tracking-wider">
+                                  Room {app.assignedRoom ? String(app.assignedRoom).padStart(2, "0") : "—"}
+                                </p>
+                                <p className="text-[#8A938D] font-medium">
+                                  Interviewer: {app.assignedInterviewer || "—"} {app.interviewDuration ? `· ${formatTime(app.interviewDuration)}` : ""}
+                                </p>
+                              </div>
+                            )}
+                            {activeCard === "approved" && (
+                              <p className="text-[#8A938D] font-medium">
+                                Interviewer: {app.assignedInterviewer || "—"}
+                              </p>
+                            )}
+                            {activeCard === "pending" && (
+                              <div className="space-y-0.5">
+                                <p className="text-[#FFB020] font-bold uppercase tracking-wider">
+                                  Pending Evaluation
+                                </p>
+                                <p className="text-[#8A938D] font-medium">
+                                  Interviewer: {app.assignedInterviewer || "—"}
+                                </p>
+                              </div>
+                            )}
+                            {activeCard === "discussion" && (
+                              <div className="space-y-0.5">
+                                <p className="text-[#FF4D4D] font-bold uppercase tracking-wider animate-pulse">
+                                  Discussion Needed
+                                </p>
+                                <p className="text-[#8A938D] font-medium">
+                                  Interviewer: {app.assignedInterviewer || "—"}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </main>
 
       {/* Global Toast Notification */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 p-4 rounded-xl flex items-start gap-3 shadow-2xl animate-in fade-in slide-in-from-bottom-4 border bg-[#101412] backdrop-blur-xl ${toast.type === 'success' ? 'border-[#00FF66]/50 text-[#00FF66]' : 'border-red-500/50 text-red-400'}`}>
+        <div className={`fixed bottom-6 right-6 z-50 p-4 rounded-xl flex items-start gap-3 shadow-2xl border bg-[#101412] backdrop-blur-xl ${toast.type === 'success' ? 'border-[#00FF66]/50 text-[#00FF66]' : 'border-red-500/50 text-red-400'}`}>
           <span className="material-symbols-outlined mt-0.5">
             {toast.type === 'success' ? 'check_circle' : 'error'}
           </span>

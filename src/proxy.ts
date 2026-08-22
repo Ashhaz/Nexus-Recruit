@@ -13,6 +13,20 @@ export default clerkMiddleware(async (auth, req) => {
     const loginUrl = new URL("/login", req.url);
     return NextResponse.redirect(loginUrl);
   }
+
+  const url = new URL(req.url);
+  const room = url.searchParams.get("room");
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", url.pathname);
+  if (room) {
+    requestHeaders.set("x-room-number", room);
+  }
+
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    }
+  });
 });
 
 export const config = {

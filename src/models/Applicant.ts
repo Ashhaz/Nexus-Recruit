@@ -17,6 +17,13 @@ export interface IApplicant extends Document {
   interviewDuration?: number;
   finalDecision?: string;
   interviewNotes?: string;
+  evaluation?: {
+    technical?: number | null;
+    communication?: number | null;
+    confidence?: number | null;
+    leadership?: number | null;
+    teamwork?: number | null;
+  };
   
   createdAt: Date;
   updatedAt: Date;
@@ -44,13 +51,24 @@ const ApplicantSchema: Schema = new Schema(
     interviewDuration: { type: Number, default: 0 },
     finalDecision: { type: String, default: "" },
     interviewNotes: { type: String, default: "" },
+    evaluation: {
+      technical: { type: Number, default: null },
+      communication: { type: Number, default: null },
+      confidence: { type: Number, default: null },
+      leadership: { type: Number, default: null },
+      teamwork: { type: Number, default: null },
+    },
   },
   {
     timestamps: true,
   }
 );
 
+if (mongoose.models && mongoose.models.Applicant) {
+  delete mongoose.models.Applicant;
+}
+
 const Applicant: Model<IApplicant> =
-  mongoose.models.Applicant || mongoose.model<IApplicant>("Applicant", ApplicantSchema);
+  mongoose.model<IApplicant>("Applicant", ApplicantSchema);
 
 export default Applicant;

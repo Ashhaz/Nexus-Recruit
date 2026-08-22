@@ -67,6 +67,7 @@ export default function ActiveInterviewPage() {
   const [data, setData] = useState<WorkspaceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isReadOnly, setIsReadOnly] = useState(false);
 
   const [interviewerName, setInterviewerName] = useState<string>("");
   const [interviewerId, setInterviewerId] = useState<string>("");
@@ -76,6 +77,26 @@ export default function ActiveInterviewPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    const checkRole = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        const json = await res.json();
+        if (json.success && json.user.role === "admin") {
+          const isConducting = localStorage.getItem(`nexus_admin_conducting_${roomNumber}`) === "true";
+          if (!isConducting) {
+            setIsReadOnly(true);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    if (roomNumber) {
+      checkRole();
+    }
+  }, [roomNumber]);
 
   const fetchData = useCallback(async () => {
     if (!roomNumber) {
@@ -349,27 +370,39 @@ export default function ActiveInterviewPage() {
                       {formatTime(elapsed)}
                     </p>
                     
-                    <div className="flex items-center gap-3 mt-6">
-                      {!isRunning ? (
-                        <button onClick={handleStartResume} className="px-8 py-3 bg-[#00FF66] text-[#050505] rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-[#00B84A] flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(0,255,102,0.3)]">
-                          <span className="material-symbols-outlined text-sm font-bold">play_arrow</span> Resume
-                        </button>
-                      ) : (
-                        <button onClick={handlePause} className="px-8 py-3 bg-[#0B0D0C] border border-[#1D2A22] text-[#F5F5F5] hover:bg-[#101412] rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-2">
-                          <span className="material-symbols-outlined text-sm font-bold">pause</span> Pause
-                        </button>
-                      )}
-                      <button onClick={handleEnd} className="px-8 py-3 bg-[#FF4D4D] text-[#F5F5F5] hover:bg-[#D32F2F] rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(255,77,77,0.25)]">
-                        <span className="material-symbols-outlined text-sm font-bold">stop</span> End Interview
-                      </button>
-                    </div>
+                    {!isReadOnly && (
+                      <>
+                        <div className="flex items-center gap-3 mt-6">
+                          {!isRunning ? (
+                            <button onClick={handleStartResume} className="px-8 py-3 bg-[#00FF66] text-[#050505] rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-[#00B84A] flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(0,255,102,0.3)]">
+                              <span className="material-symbols-outlined text-sm font-bold">play_arrow</span> Resume
+                            </button>
+                          ) : (
+                            <button onClick={handlePause} className="px-8 py-3 bg-[#0B0D0C] border border-[#1D2A22] text-[#F5F5F5] hover:bg-[#101412] rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-2">
+                              <span className="material-symbols-outlined text-sm font-bold">pause</span> Pause
+                            </button>
+                          )}
+                          <button onClick={handleEnd} className="px-8 py-3 bg-[#FF4D4D] text-[#F5F5F5] hover:bg-[#D32F2F] rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(255,77,77,0.25)]">
+                            <span className="material-symbols-outlined text-sm font-bold">stop</span> End Interview
+                          </button>
+                        </div>
 
-                    <button
-                      onClick={() => router.push(`/interviewer/evaluation?room=${roomNumber}&name=${encodeURIComponent(data.room.interviewer || "")}`)}
-                      className="w-full mt-6 py-4 bg-[#00FF66]/10 hover:bg-[#00FF66]/20 border border-[#00FF66]/30 text-[#00FF66] rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
-                    >
-                      <span className="material-symbols-outlined text-sm font-bold">assignment_turned_in</span> Begin Evaluation
-                    </button>
+                        <button
+                          onClick={() => router.push(`/interviewer/evaluation?room=${roomNumber}&name=${encodeURIComponent(data.room.interviewer || "")}`)}
+                          className="w-full mt-6 py-4 bg-[#00FF66]/10 hover:bg-[#00FF66]/20 border border-[#00FF66]/30 text-[#00FF66] rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
+                        >
+                          <span className="material-symbols-outlined text-sm font-bold">assignment_turned_in</span> Begin Evaluation
+                        </button>
+                      </>
+                    )}
+                    {isReadOnly && (
+                      <div className="mt-6 p-3 border border-[#1D2A22] rounded-lg bg-[#0B0D0C]/50 text-center">
+                        <p className="text-[10px] text-[#8A938D] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
+                          <span className="material-symbols-outlined text-sm text-[#00FF66]">visibility</span>
+                          Viewing Mode (Read-Only)
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <hr className="border-[#1D2A22] my-4" />
@@ -382,8 +415,9 @@ export default function ActiveInterviewPage() {
                       id="notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Type observations during the interview..."
-                      className="flex-1 w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg px-4 py-3 text-sm text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none resize-none"
+                      disabled={isReadOnly}
+                      placeholder={isReadOnly ? "No notes available in view mode." : "Type observations during the interview..."}
+                      className="flex-1 w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg px-4 py-3 text-sm text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -420,7 +454,6 @@ export default function ActiveInterviewPage() {
                     if (filteredResponses.length === 0) {
                       return (
                         <div className="text-center py-20 text-[#8A938D]">
-                          <span className="material-symbols-outlined text-4xl opacity-50 mb-3">feed</span>
                           <p className="text-xs font-bold uppercase tracking-wider">No responses available.</p>
                         </div>
                       );

@@ -61,9 +61,26 @@ export default function ApplicantSelectPage() {
     }
     setError("");
     try {
+      // Validate role and intentional entry flow first
+      const resAuth = await fetch("/api/auth/me");
+      const jsonAuth = await resAuth.json();
+      if (jsonAuth.success && jsonAuth.user.role === "admin") {
+        const isConducting = localStorage.getItem(`nexus_admin_conducting_${roomNumber}`) === "true";
+        if (!isConducting) {
+          router.push("/admin/dashboard");
+          return;
+        }
+      }
+
       const resRoom = await fetch(`/api/interviewer/workspace?room=${roomNumber}`);
       const jsonRoom = await resRoom.json();
       if (!jsonRoom.success) throw new Error(jsonRoom.error || "Failed to load room");
+
+      // Double-verify: an active interview exists, block selection page access for admin
+      if (jsonAuth.success && jsonAuth.user.role === "admin" && jsonRoom.applicant !== null) {
+        router.push("/admin/dashboard");
+        return;
+      }
 
       // Physical identity always comes from the registered room document
       setInterviewerName(jsonRoom.room.interviewer ?? "");
@@ -73,7 +90,7 @@ export default function ApplicantSelectPage() {
     } finally {
       setLoading(false);
     }
-  }, [roomNumber]);
+  }, [roomNumber, router]);
 
   useEffect(() => {
     fetchRoomData();
@@ -218,11 +235,7 @@ export default function ApplicantSelectPage() {
           {selectedApplicant ? (
             <section className="block w-full max-w-2xl mx-auto">
               <div className="block w-full bg-[#101412] rounded-xl p-8 md:p-12 shadow-2xl border border-[#00FF66]/20 text-center">
-                <div className="w-20 h-20 bg-[#00FF66]/10 rounded-full flex items-center justify-center border border-[#00FF66]/20 mb-6 shadow-inner text-[#00FF66] mx-auto">
-                  <span className="material-symbols-outlined text-4xl">person_check</span>
-                </div>
-                
-                <h3 className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-2">Confirm Selection</h3>
+                <h3 className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-2 mt-4">Confirm Selection</h3>
                 <h2 className="text-3xl font-black text-[#F5F5F5] mb-2 uppercase tracking-wide break-words">{selectedApplicant.name}</h2>
                 <p className="text-lg font-mono text-[#00FF66] font-bold mb-8">{selectedApplicant.rollNumber}</p>
 

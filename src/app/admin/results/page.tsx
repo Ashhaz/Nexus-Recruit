@@ -27,6 +27,13 @@ interface ApplicantResult {
   interviewNotes?: string;
   updatedAt: string;
   createdAt: string;
+  evaluation?: {
+    technical?: number;
+    communication?: number;
+    confidence?: number;
+    leadership?: number;
+    teamwork?: number;
+  };
   interview?: {
     ratings?: {
       technical: number;
@@ -47,7 +54,6 @@ interface ApplicantResult {
 export default function AdminResultsPage() {
   const pathname = usePathname();
 
-  // ── State ───────────────────────────────────────────────────────────────────
   const [data, setData] = useState<ApplicantResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -58,17 +64,8 @@ export default function AdminResultsPage() {
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [interviewerFilter, setInterviewerFilter] = useState("All");
 
-  // Drawer
-  const [selectedApplicant, setSelectedApplicant] = useState<ApplicantResult | null>(null);
-
-  // Escape key closes drawer
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Escape") setSelectedApplicant(null);
-  }, []);
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+  // Expanded row state
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // ── Data Fetching ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -167,6 +164,138 @@ export default function AdminResultsPage() {
       case "Pending": return "text-[#FFB020] bg-[#FFB020]/10";
       default: return "text-[#8A938D] bg-[#8A938D]/10"; // Waiting
     }
+  };
+
+  const renderExpandedContent = (a: ApplicantResult) => {
+    const status = (a.interviewStatus || "Waiting").toUpperCase();
+    
+    if (status === "WAITING") {
+      return (
+        <div className="text-center py-6 text-[#8A938D]">
+          <span className="material-symbols-outlined text-3xl mb-2 text-[#8A938D]/40">hourglass_empty</span>
+          <p className="text-xs font-bold uppercase tracking-wider">No interview has been conducted yet.</p>
+        </div>
+      );
+    }
+
+    if (status === "INTERVIEWING") {
+      return (
+        <div className="space-y-4">
+          <h4 className="text-[10px] font-black tracking-widest text-[#00FF66] uppercase">Interview In Progress</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-[#050505]/40 border border-[#14321c] rounded-lg p-3">
+              <p className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-1">Interviewer</p>
+              <p className="text-sm font-semibold text-[#F5F5F5]">{a.assignedInterviewer || "Not Assigned"}</p>
+            </div>
+            <div className="bg-[#050505]/40 border border-[#14321c] rounded-lg p-3">
+              <p className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-1">Room</p>
+              <p className="text-sm font-semibold text-[#F5F5F5]">{a.assignedRoom ? `Room ${String(a.assignedRoom).padStart(2, "0")}` : "Not Assigned"}</p>
+            </div>
+            <div className="bg-[#050505]/40 border border-[#14321c] rounded-lg p-3">
+              <p className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-1">Duration</p>
+              <p className="text-sm font-semibold text-[#F5F5F5]">
+                {a.interviewDuration ? `${Math.floor(a.interviewDuration / 60)}m ${a.interviewDuration % 60}s` : "0m 0s"}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // APPROVED, PENDING, DISCUSSION NEEDED (or any other status)
+    return (
+      <div className="space-y-6">
+        {/* Interview Details Grid */}
+        <div>
+          <h4 className="text-[10px] font-black tracking-widest text-[#00FF66] uppercase mb-3">Interview Details</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-[#050505]/40 border border-[#14321c] rounded-lg p-3">
+              <p className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-1">Interviewer</p>
+              <p className="text-sm font-semibold text-[#F5F5F5]">{a.assignedInterviewer || "—"}</p>
+            </div>
+            <div className="bg-[#050505]/40 border border-[#14321c] rounded-lg p-3">
+              <p className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-1">Room</p>
+              <p className="text-sm font-semibold text-[#F5F5F5]">{a.assignedRoom ? `Room ${String(a.assignedRoom).padStart(2, "0")}` : "—"}</p>
+            </div>
+            <div className="bg-[#050505]/40 border border-[#14321c] rounded-lg p-3">
+              <p className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-1">Interview Duration</p>
+              <p className="text-sm font-semibold text-[#F5F5F5]">
+                {a.interviewDuration ? `${Math.floor(a.interviewDuration / 60)}m ${a.interviewDuration % 60}s` : "—"}
+              </p>
+            </div>
+            <div className="bg-[#050505]/40 border border-[#14321c] rounded-lg p-3">
+              <p className="text-[9px] font-black text-[#8A938D] uppercase tracking-widest mb-1">Decision</p>
+              <p className="text-sm font-semibold text-[#F5F5F5]">{a.finalDecision || "—"}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Ratings & Notes Split Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Ratings */}
+          <div>
+            <h4 className="text-[10px] font-black tracking-widest text-[#00FF66] uppercase mb-3">Ratings</h4>
+            <div className="bg-[#050505]/40 border border-[#14321c] rounded-lg p-4 space-y-3">
+              {(() => {
+                const isHistorical = a.evaluation &&
+                  a.evaluation.technical === 7 &&
+                  a.evaluation.communication === 8 &&
+                  a.evaluation.confidence === 8 &&
+                  a.evaluation.leadership === 6 &&
+                  a.evaluation.teamwork === 9 &&
+                  new Date(a.updatedAt).getTime() < new Date("2026-08-22T15:00:00Z").getTime();
+
+                return (
+                  <>
+                    {[
+                      { label: "Technical", val: isHistorical ? undefined : a.evaluation?.technical },
+                      { label: "Communication", val: isHistorical ? undefined : a.evaluation?.communication },
+                      { label: "Confidence", val: isHistorical ? undefined : a.evaluation?.confidence },
+                      { label: "Leadership", val: isHistorical ? undefined : a.evaluation?.leadership },
+                      { label: "Teamwork", val: isHistorical ? undefined : a.evaluation?.teamwork }
+                    ].map(({ label, val }) => (
+                      <div key={label} className="flex items-center justify-between">
+                        <span className="text-xs text-[#F5F5F5] capitalize">{label}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 h-1.5 bg-[#0B0D0C] border border-[#1D2A22] rounded-full overflow-hidden">
+                            <div 
+                              className="height-full bg-[#00FF66] rounded-full" 
+                              style={{ 
+                                height: "100%", 
+                                width: val ? `${(val / 5) * 100}%` : "0%",
+                                boxShadow: "0 0 6px rgba(0, 255, 102, 0.4)" 
+                              }} 
+                            />
+                          </div>
+                          <span className="text-xs font-mono font-bold text-[#00FF66] min-w-[12px] text-right">
+                            {val !== undefined ? val : "—"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {isHistorical && (
+                      <div className="text-[10px] text-[#8A938D] font-bold uppercase tracking-wider pt-2 border-t border-[#1D2A22]/30 text-center">
+                        Historical evaluation data unavailable.
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Interview Notes */}
+          <div className="flex flex-col">
+            <h4 className="text-[10px] font-black tracking-widest text-[#00FF66] uppercase mb-3">Interview Notes</h4>
+            <div className="flex-1 bg-[#050505]/40 border border-[#14321c] rounded-lg p-4">
+              <p className="text-xs text-[#F5F5F5] leading-relaxed whitespace-pre-wrap">
+                {a.interviewNotes || a.interview?.notes || "No interview notes were added."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -371,39 +500,59 @@ export default function AdminResultsPage() {
                     </tr>
                   ) : (
                     // Render Data
-                    filteredData.map(a => (
-                      <tr 
-                        key={a._id} 
-                        className="hover:bg-[#00FF66]/5 transition-colors cursor-pointer group"
-                        onClick={() => {
-                          setSelectedApplicant(a);
-                        }}
-                      >
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-bold text-[#F5F5F5] group-hover:text-[#00FF66] transition-colors">{a.name}</p>
-                          <p className="text-xs text-[#8A938D] font-mono mt-0.5">{a.rollNumber}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm text-[#F5F5F5]">{a.department || "—"}</p>
-                          {a.teamApplied && <p className="text-xs text-[#8A938D] mt-0.5">{a.teamApplied}</p>}
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm text-[#F5F5F5]">{a.assignedRoom ? `Room ${String(a.assignedRoom).padStart(2, "0")}` : "—"}</p>
-                          <p className="text-xs text-[#8A938D] mt-0.5">{a.assignedInterviewer || "—"}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(a.interviewStatus || "Waiting")}`}>
-                            {a.interviewStatus || "Waiting"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-semibold text-[#F5F5F5]">{a.finalDecision || "—"}</p>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <p className="text-xs text-[#8A938D] font-mono">{new Date(a.updatedAt).toLocaleDateString()}</p>
-                        </td>
-                      </tr>
-                    ))
+                    filteredData.map(a => {
+                      const isExpanded = expandedId === a._id;
+                      return (
+                        <React.Fragment key={a._id}>
+                          <tr 
+                            className="hover:bg-[#00FF66]/5 transition-colors cursor-pointer group"
+                            onClick={() => {
+                              setExpandedId(isExpanded ? null : a._id);
+                            }}
+                          >
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <span className="material-symbols-outlined text-[18px] text-[#8A938D] group-hover:text-[#00FF66] transition-colors select-none">
+                                  {isExpanded ? "keyboard_arrow_up" : "keyboard_arrow_down"}
+                                </span>
+                                <div>
+                                  <p className="text-sm font-bold text-[#F5F5F5] group-hover:text-[#00FF66] transition-colors">{a.name}</p>
+                                  <p className="text-xs text-[#8A938D] font-mono mt-0.5">{a.rollNumber}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm text-[#F5F5F5]">{a.department || "—"}</p>
+                              {a.teamApplied && <p className="text-xs text-[#8A938D] mt-0.5">{a.teamApplied}</p>}
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm text-[#F5F5F5]">{a.assignedRoom ? `Room ${String(a.assignedRoom).padStart(2, "0")}` : "—"}</p>
+                              <p className="text-xs text-[#8A938D] mt-0.5">{a.assignedInterviewer || "—"}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(a.interviewStatus || "Waiting")}`}>
+                                {a.interviewStatus || "Waiting"}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-semibold text-[#F5F5F5]">{a.finalDecision || "—"}</p>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <p className="text-xs text-[#8A938D] font-mono">{new Date(a.updatedAt).toLocaleDateString()}</p>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr>
+                              <td colSpan={6} className="px-6 py-5 bg-[#0B150F]/70 border-y border-[#14321c]">
+                                <div className="rounded-lg border border-[#14321c] p-6 bg-[#080F0A]/90 text-left">
+                                  {renderExpandedContent(a)}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -412,198 +561,6 @@ export default function AdminResultsPage() {
 
         </div>
       </main>
-
-      {/* ── Side Drawer ─────────────────────────────────────────────────────── */}
-      {selectedApplicant && (
-        <>  
-          {/* Overlay */}
-          <div
-            style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-            onClick={() => setSelectedApplicant(null)}
-            aria-label="Close drawer"
-          />
-          {/* Panel */}
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              right: 0,
-              zIndex: 101,
-              width: "min(45vw, 560px)",
-              height: "100vh",
-              background: "#0B0D0C",
-              borderLeft: "1px solid #1D2A22",
-              boxShadow: "-8px 0 32px rgba(0,0,0,0.8)",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            {/* ── Drawer Header ── */}
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid #1D2A22", flexShrink: 0, background: "#0B0D0C" }}>
-              <div>
-                <h3 style={{ fontSize: "1.125rem", fontWeight: 900, color: "#F5F5F5", margin: 0, lineHeight: 1.3, textTransform: "uppercase", letterSpacing: "0.05em" }}>{selectedApplicant.name}</h3>
-                <p style={{ fontSize: "0.8rem", fontFamily: "monospace", color: "#8A938D", margin: "4px 0 0 0" }}>{selectedApplicant.rollNumber}</p>
-              </div>
-              <button
-                onClick={() => setSelectedApplicant(null)}
-                style={{ padding: "6px", borderRadius: "50%", border: "none", background: "transparent", color: "#8A938D", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                title="Close"
-                className="hover:text-[#00FF66] transition-colors"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>close</span>
-              </button>
-            </div>
-
-            {/* ── Drawer Body ── */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }} className="custom-scrollbar">
-              
-              {/* ── Status + Decision cards ── */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div style={{ background: "#101412", border: "1px solid #1D2A22", borderRadius: "12px", padding: "14px" }}>
-                  <p style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A938D", fontWeight: 900, marginBottom: "8px" }}>Status</p>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(selectedApplicant.interviewStatus || "Waiting")}`}>
-                    {selectedApplicant.interviewStatus || "Waiting"}
-                  </span>
-                </div>
-                <div style={{ background: "#101412", border: "1px solid #1D2A22", borderTop: "2px solid #00FF66", borderRadius: "12px", padding: "14px" }}>
-                  <p style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A938D", fontWeight: 900, marginBottom: "8px" }}>Final Decision</p>
-                  <p style={{ fontSize: "1rem", fontWeight: 900, color: "#F5F5F5" }}>{selectedApplicant.finalDecision || "—"}</p>
-                </div>
-              </div>
-
-              {/* ── Profile fields ── */}
-              <div>
-                <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>person</span>
-                  Profile Information
-                </h4>
-                <div style={{ background: "#101412", border: "1px solid #1D2A22", borderRadius: "12px", padding: "16px", display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: "14px", columnGap: "20px" }}>
-                  {[
-                    { label: "Department", value: selectedApplicant.department },
-                    { label: "Branch", value: selectedApplicant.branch },
-                    { label: "Year", value: selectedApplicant.year },
-                    { label: "Applied Team", value: selectedApplicant.teamApplied },
-                    { label: "Email", value: selectedApplicant.email },
-                    { label: "Phone", value: selectedApplicant.phone },
-                  ].map(({ label, value }) => (
-                    <div key={label}>
-                      <p style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A938D", fontWeight: 900, marginBottom: "3px" }}>{label}</p>
-                      <p style={{ fontSize: "13px", color: value ? "#F5F5F5" : "#8A938D" }}>{value || "—"}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Interview Details ── */}
-              <div>
-                <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>admin_panel_settings</span>
-                  Telemetry &amp; Interview Details
-                </h4>
-                <div style={{ background: "#101412", border: "1px solid #1D2A22", borderRadius: "12px", padding: "16px", display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: "14px", columnGap: "20px" }}>
-                  {[
-                    { label: "Assigned Room", value: selectedApplicant.assignedRoom ? `Room ${String(selectedApplicant.assignedRoom).padStart(2, "0")}` : null },
-                    { label: "Interviewer", value: selectedApplicant.assignedInterviewer },
-                    { label: "Duration", value: selectedApplicant.interviewDuration ? `${Math.floor(selectedApplicant.interviewDuration / 60)}m ${selectedApplicant.interviewDuration % 60}s` : null },
-                  ].map(({ label, value }) => (
-                    <div key={label}>
-                      <p style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A938D", fontWeight: 900, marginBottom: "3px" }}>{label}</p>
-                      <p style={{ fontSize: "13px", color: value ? "#F5F5F5" : "#8A938D" }}>{value || "—"}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Ratings ── */}
-              {selectedApplicant.interview?.ratings && Object.keys(selectedApplicant.interview.ratings).length > 0 && (
-                <div>
-                  <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>star</span>
-                    Evaluation Metrics
-                  </h4>
-                  <div style={{ background: "#101412", border: "1px solid #1D2A22", borderRadius: "12px", padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                    {Object.entries(selectedApplicant.interview.ratings).map(([key, val]) => (
-                      <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: "13px", color: "#F5F5F5", textTransform: "capitalize", flex: 1 }}>{key}</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <div style={{ width: "100px", height: "6px", background: "#0B0D0C", borderRadius: "999px", overflow: "hidden" }}>
-                            <div style={{ height: "100%", background: "#00FF66", borderRadius: "999px", width: `${(val / 5) * 100}%`, boxShadow: "0 0 8px rgba(0, 255, 102, 0.4)" }} />
-                          </div>
-                          <span style={{ fontSize: "12px", fontFamily: "monospace", color: "#00FF66", minWidth: "16px", textAlign: "right", fontWeight: "bold" }}>{val}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ── Interview Notes ── */}
-              {(selectedApplicant.interviewNotes || selectedApplicant.interview?.notes) && (
-                <div>
-                  <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>edit_note</span>
-                    Interview Log Notes
-                  </h4>
-                  <div style={{ background: "#101412", border: "1px solid #1D2A22", borderRadius: "12px", padding: "16px" }}>
-                    <p style={{ fontSize: "13px", color: "#F5F5F5", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
-                      {selectedApplicant.interviewNotes || selectedApplicant.interview?.notes}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Google Form Responses ── */}
-              {selectedApplicant.responses && Object.keys(selectedApplicant.responses).length > 0 && (
-                <div>
-                  <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>feed</span>
-                    Application Form Responses
-                  </h4>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                    {Object.entries(selectedApplicant.responses).map(([question, answer], idx) => (
-                      <div key={idx} style={{ borderLeft: "2px solid #00FF66", paddingLeft: "14px" }}>
-                        <p style={{ fontSize: "11px", color: "#8A938D", marginBottom: "3px", fontWeight: 600 }}>{question}</p>
-                        <p style={{ fontSize: "13px", color: "#F5F5F5", lineHeight: 1.6 }}>{answer || "—"}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ── Timeline ── */}
-              <div>
-                <h4 style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00FF66", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>schedule</span>
-                  Activity Timeline
-                </h4>
-                <div style={{ borderLeft: "2px solid #1D2A22", paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "14px", paddingBottom: "8px" }}>
-                  <div style={{ position: "relative" }}>
-                    <div style={{ position: "absolute", left: "-24px", top: "4px", width: "8px", height: "8px", borderRadius: "50%", background: "#8A938D", boxShadow: "0 0 0 3px #0B0D0C" }} />
-                    <p style={{ fontSize: "13px", color: "#F5F5F5" }}>Application Received</p>
-                    <p style={{ fontSize: "11px", color: "#8A938D", fontFamily: "monospace" }}>{new Date(selectedApplicant.createdAt || selectedApplicant.updatedAt).toLocaleString()}</p>
-                  </div>
-                  {selectedApplicant.interviewStatus !== "Waiting" && (
-                    <div style={{ position: "relative" }}>
-                      <div style={{ position: "absolute", left: "-24px", top: "4px", width: "8px", height: "8px", borderRadius: "50%", background: "#00FF66", boxShadow: "0 0 0 3px #0B0D0C" }} />
-                      <p style={{ fontSize: "13px", color: "#F5F5F5" }}>Interview Started</p>
-                      <p style={{ fontSize: "11px", color: "#8A938D", fontFamily: "monospace" }}>{selectedApplicant.interview?.startTime ? new Date(selectedApplicant.interview.startTime).toLocaleString() : "—"}</p>
-                    </div>
-                  )}
-                  {["Approved", "Pending", "Discussion Needed"].includes(selectedApplicant.interviewStatus) && (
-                    <div style={{ position: "relative" }}>
-                      <div style={{ position: "absolute", left: "-24px", top: "4px", width: "8px", height: "8px", borderRadius: "50%", background: "#00FF66", boxShadow: "0 0 0 3px #0B0D0C" }} />
-                      <p style={{ fontSize: "13px", color: "#F5F5F5" }}>Interview Completed</p>
-                      <p style={{ fontSize: "11px", color: "#8A938D", fontFamily: "monospace" }}>{selectedApplicant.interview?.endTime ? new Date(selectedApplicant.interview.endTime).toLocaleString() : "—"}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </>
-      )}
 
       {/* Global CSS */}
       <style dangerouslySetInnerHTML={{__html: `

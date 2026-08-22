@@ -252,7 +252,6 @@ export default function InterviewerEvaluationPage() {
             {/* ── Ratings ─────────────────────────────────────────────────── */}
             <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-6 shadow-xl">
               <div className="flex items-center gap-2 mb-6 border-b border-[#1D2A22]/50 pb-3">
-                <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">star</span>
                 <h2 className="text-xs font-black text-[#F5F5F5] uppercase tracking-widest">Performance Ratings</h2>
                 <span className="text-[10px] text-[#8A938D] font-bold uppercase tracking-wider ml-auto">Scale: 1 – 10</span>
               </div>
@@ -304,7 +303,6 @@ export default function InterviewerEvaluationPage() {
             {/* ── Final Decision ───────────────────────────────────────────── */}
             <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-6 shadow-xl">
               <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">gavel</span>
                 <h2 className="text-xs font-black text-[#F5F5F5] uppercase tracking-widest">Final Decision</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
