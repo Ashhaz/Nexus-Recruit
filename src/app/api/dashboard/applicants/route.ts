@@ -20,7 +20,11 @@ export async function GET() {
         assignedInterviewer: 1,
         interviewDuration: 1,
         finalDecision: 1,
-        interviewNotes: 1
+        interviewNotes: 1,
+        teamApplied: 1,
+        evaluation: 1,
+        responses: 1,
+        updatedAt: 1
       }
     ).lean();
 
