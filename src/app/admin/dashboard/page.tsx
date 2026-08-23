@@ -69,10 +69,7 @@ export default function AdminDashboardPage() {
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  // ── Admin Identity Selection State ─────────────────────────────────────────
-  const [identities, setIdentities] = useState<{ id: string; name: string }[]>([]);
-  const [selectedIdentities, setSelectedIdentities] = useState<Record<number, string>>({});
-  const [registeringRoom, setRegisteringRoom] = useState<number | null>(null);
+
 
   // ── Interactive Controls ──────────────────────────────────────────────────
   const [activeCard, setActiveCard] = useState<"total" | "waiting" | "interviewing" | "approved" | "pending" | "discussion" | null>(null);
@@ -123,28 +120,15 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  const fetchIdentities = useCallback(async () => {
-    try {
-      const res = await fetch("/api/interviewer/identities");
-      const json = await res.json();
-      if (json.success && json.identities) {
-        setIdentities(json.identities);
-      }
-    } catch (e) {
-      console.error("Error fetching interviewer identities:", e);
-    }
-  }, []);
-
   useEffect(() => {
     fetchApplicants(false);
     fetchRooms(false);
-    fetchIdentities();
     const interval = setInterval(() => {
       fetchApplicants(true);
       fetchRooms(true);
     }, 10000);
     return () => clearInterval(interval);
-  }, [fetchApplicants, fetchRooms, fetchIdentities]);
+  }, [fetchApplicants, fetchRooms]);
 
   // Scroll to bottom expanded list automatically when state changes to an active card
   useEffect(() => {
@@ -191,35 +175,7 @@ export default function AdminDashboardPage() {
 
   // ── Admin Enter Available Room Logic ───────────────────────────────────────
 
-  const handleEnterRoom = async (roomNumber: number) => {
-    const interviewerName = selectedIdentities[roomNumber];
-    if (!interviewerName) {
-      showToast("Please select an interviewer identity first.", "error");
-      return;
-    }
 
-    setRegisteringRoom(roomNumber);
-    try {
-      const res = await fetch("/api/interviewer/workspace/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomNumber,
-          interviewerName,
-        }),
-      });
-      const json = await res.json();
-      if (!json.success) {
-        throw new Error(json.error || "Failed to register room");
-      }
-      localStorage.setItem(`nexus_admin_conducting_${roomNumber}`, "true");
-      router.push(`/interviewer/workspace/select?room=${roomNumber}`);
-    } catch (e: any) {
-      showToast(e.message || "An error occurred", "error");
-    } finally {
-      setRegisteringRoom(null);
-    }
-  };
 
   // ── Single Source of Truth Calculations ────────────────────────────────────
 
@@ -272,7 +228,6 @@ export default function AdminDashboardPage() {
     const hasActiveInterview = room.status === "Occupied" && room.applicant !== null;
     const isRegistered = room.interviewer !== "" && room.interviewer !== undefined && room.interviewer !== null;
     const formattedRoomNumber = String(room.roomNumber).padStart(2, "0");
-    const [isExpanded, setIsExpanded] = useState(false);
     const [elapsed, setElapsed] = useState(0);
 
     useEffect(() => {
@@ -286,28 +241,25 @@ export default function AdminDashboardPage() {
       return () => clearInterval(interval);
     }, [hasActiveInterview, room.startedAt]);
 
-    const handleEnterBtnClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      const interviewerName = selectedIdentities[room.roomNumber];
-      if (!interviewerName) {
-        setIsExpanded(true);
-        showToast("Please select an interviewer identity first.", "error");
-        return;
-      }
-      handleEnterRoom(room.roomNumber);
-    };
+    function formatTime(totalSeconds: number): string {
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      if (h > 0)
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
 
     return (
       <div 
-        onClick={() => setIsExpanded(!isExpanded)}
-        className={`bg-[#101412] p-6 rounded-xl flex flex-col gap-4 border transition-all duration-300 shadow-xl relative overflow-hidden cursor-pointer group ${
+        className={`bg-[#101412] p-6 rounded-xl flex flex-col gap-4 border transition-all duration-300 shadow-xl relative overflow-hidden ${
           hasActiveInterview 
-            ? "border-[#00FF66]/30 hover:border-[#00FF66]/60 shadow-[0_0_15px_rgba(0,255,102,0.05)]" 
-            : "border-[#1D2A22] hover:border-[#8A938D]/30"
+            ? "border-[#00FF66]/30 shadow-[0_0_15px_rgba(0,255,102,0.05)]" 
+            : "border-[#1D2A22]"
         }`}
       >
-        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-          <span className="material-symbols-outlined text-6xl text-[#00FF66]">meeting_room</span>
+        <div className="absolute top-0 right-0 p-4 opacity-5 text-[#00FF66]">
+          <span className="material-symbols-outlined text-6xl">meeting_room</span>
         </div>
         
         <div className="flex items-center justify-between z-10">
@@ -316,6 +268,8 @@ export default function AdminDashboardPage() {
             className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
               hasActiveInterview
                 ? "bg-[#00FF66]/10 text-[#00FF66]"
+                : isRegistered
+                ? "bg-[#00FF66]/5 text-[#8A938D]"
                 : "bg-[#8A938D]/10 text-[#8A938D]"
             }`}
           >
@@ -324,144 +278,45 @@ export default function AdminDashboardPage() {
           </span>
         </div>
 
-        <div className="z-10 flex-1">
-          {!isExpanded ? (
-            <div className="space-y-1">
-              <p className="text-[10px] text-[#8A938D] font-black uppercase tracking-wider">
-                {hasActiveInterview ? "Active Interview" : "Status"}
+        <div className="z-10 flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-3 text-xs border-t border-[#1D2A22]/50 pt-3">
+            <div>
+              <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">STATUS</p>
+              <p className="font-bold text-[#F5F5F5] uppercase">
+                {hasActiveInterview ? "LIVE" : isRegistered ? "REGISTERED" : "AVAILABLE"}
               </p>
-              <p className="text-xs font-semibold text-[#F5F5F5]">
-                {hasActiveInterview ? (room.applicant?.name || "—") : isRegistered ? "Registered" : "Ready for Interview"}
-              </p>
-              {hasActiveInterview && room.applicant && (
-                <p className="text-[10px] font-mono text-[#8A938D]">
-                  {room.applicant.rollNumber}
-                </p>
-              )}
             </div>
-          ) : (
-            <>
-              {hasActiveInterview && (
-                <div className="space-y-3 pt-2 border-t border-[#1D2A22]/50 animate-in fade-in duration-300">
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">STATUS</p>
-                      <p className="font-bold text-[#F5F5F5]">LIVE</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">INTERVIEWER</p>
-                      <p className="font-bold text-[#F5F5F5] truncate">{room.interviewer || "—"}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">CANDIDATE</p>
-                        <p className="font-bold text-[#00FF66]">{room.applicant?.name || "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">ROLL NUMBER</p>
-                        <p className="font-bold font-mono text-[#F5F5F5]">{room.applicant?.rollNumber || "—"}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">INTERVIEW DURATION</p>
-                      <p className="font-bold font-mono text-[#00FF66] text-sm">{formatTime(elapsed)}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div>
+              <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">INTERVIEWER</p>
+              <p className="font-bold text-[#F5F5F5] truncate">
+                {isRegistered ? (room.interviewer || "—") : "—"}
+              </p>
+            </div>
+          </div>
 
-              {!hasActiveInterview && isRegistered && (
-                <div className="space-y-3 pt-2 border-t border-[#1D2A22]/50 animate-in fade-in duration-300">
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">STATUS</p>
-                      <p className="font-bold text-[#F5F5F5]">REGISTERED</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">INTERVIEWER</p>
-                      <p className="font-bold text-[#F5F5F5] truncate">{room.interviewer || "—"}</p>
-                    </div>
-                  </div>
-                  <div className="text-xs pt-1">
-                    <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">ACTIVE INTERVIEW</p>
-                    <p className="font-semibold text-[#8A938D]">NO ACTIVE INTERVIEW</p>
-                  </div>
-                </div>
-              )}
+          <div className="grid grid-cols-2 gap-3 text-xs border-t border-[#1D2A22]/30 pt-3">
+            <div>
+              <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">CANDIDATE</p>
+              <p className={`font-bold ${hasActiveInterview ? "text-[#00FF66]" : "text-[#F5F5F5]/40"}`}>
+                {hasActiveInterview ? (room.applicant?.name || "—") : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">ROLL NUMBER</p>
+              <p className={`font-bold font-mono ${hasActiveInterview ? "text-[#F5F5F5]" : "text-[#F5F5F5]/40"}`}>
+                {hasActiveInterview ? (room.applicant?.rollNumber || "—") : "—"}
+              </p>
+            </div>
+          </div>
 
-              {!hasActiveInterview && !isRegistered && (
-                <div className="space-y-3 pt-2 border-t border-[#1D2A22]/50 animate-in fade-in duration-300">
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">STATUS</p>
-                      <p className="font-bold text-[#F5F5F5]">AVAILABLE</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">INTERVIEWER</p>
-                      <p className="font-bold text-[#F5F5F5]">NONE</p>
-                    </div>
-                  </div>
-                  <div className="text-xs pt-1 space-y-2">
-                    <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">ACTIVE INTERVIEW</p>
-                    <p className="font-semibold text-[#8A938D]">NO ACTIVE INTERVIEW</p>
-                    
-                    <div className="pt-2 space-y-1.5 border-t border-[#1D2A22]/30" onClick={(e) => e.stopPropagation()}>
-                      <label className="text-[9px] text-[#8A938D] font-black uppercase tracking-widest block">
-                        Select Physical Identity
-                      </label>
-                      <select
-                        value={selectedIdentities[room.roomNumber] || ""}
-                        onChange={(e) => setSelectedIdentities({
-                          ...selectedIdentities,
-                          [room.roomNumber]: e.target.value
-                        })}
-                        className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-2.5 py-1.5 text-[11px] text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors font-bold uppercase tracking-wider"
-                      >
-                        <option value="" disabled>-- Choose Interviewer --</option>
-                        {identities.map((id) => (
-                          <option key={id.id} value={id.name}>{id.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        <div className="flex gap-2 mt-2 z-10" onClick={(e) => e.stopPropagation()}>
-          {hasActiveInterview ? (
-            <Link
-              href={`/interviewer/workspace/active?room=${room.roomNumber}`}
-              className="flex-1 py-2 bg-[#0B0D0C] hover:bg-[#00FF66] hover:text-[#050505] rounded-lg text-[10px] font-bold uppercase tracking-wider text-[#F5F5F5] transition-all border border-[#1D2A22] flex items-center justify-center gap-1.5 shadow-md"
-            >
-              <span className="material-symbols-outlined text-[13px]">visibility</span>
-              View Interview
-            </Link>
-          ) : (
-            <button
-              onClick={isRegistered ? () => {
-                localStorage.setItem(`nexus_admin_conducting_${room.roomNumber}`, "true");
-                router.push(`/interviewer/workspace/select?room=${room.roomNumber}`);
-              } : handleEnterBtnClick}
-              disabled={registeringRoom === room.roomNumber}
-              className="flex-1 py-2 bg-[#00FF66] hover:bg-[#00E55C] text-[#050505] rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border border-[#00FF66]/20 flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-[13px]">login</span>
-              {registeringRoom === room.roomNumber ? "Entering..." : "Enter Room"}
-            </button>
-          )}
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="px-3 py-2 bg-[#0B0D0C] hover:bg-[#101412] border border-[#1D2A22] rounded-lg text-[10px] font-bold text-[#8A938D] hover:text-[#F5F5F5] transition-colors"
-          >
-            <span className="material-symbols-outlined text-[14px]">
-              {isExpanded ? "expand_less" : "expand_more"}
-            </span>
-          </button>
+          <div className="border-t border-[#1D2A22]/30 pt-3 text-xs">
+            <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">
+              {hasActiveInterview ? "INTERVIEW DURATION" : "ACTIVE INTERVIEW"}
+            </p>
+            <p className={`font-bold ${hasActiveInterview ? "font-mono text-[#00FF66] text-sm" : "text-[#8A938D]"}`}>
+              {hasActiveInterview ? formatTime(elapsed) : "No Active Interview"}
+            </p>
+          </div>
         </div>
       </div>
     );
