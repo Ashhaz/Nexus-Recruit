@@ -365,30 +365,6 @@ export default function AdminRoomsPage() {
       {/* Main Content Area */}
       <main className="md:ml-64 flex-1 min-h-screen flex flex-col relative">
 
-        {/* TopNavBar */}
-        <header className="w-full sticky top-0 z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-[#1D2A22] shadow-sm">
-          <div className="flex items-center justify-between px-8 h-16 w-full max-w-container-max mx-auto">
-            <div className="flex items-center gap-xl">
-              <span className="text-xl font-black text-[#00FF66] drop-shadow-[0_0_8px_rgba(0,255,102,0.4)] md:hidden">NEXUS</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <button className="p-2 text-[#8A938D] hover:text-[#00FF66] hover:bg-[#00FF66]/10 rounded-full transition-all">
-                <span className="material-symbols-outlined">notifications</span>
-              </button>
-              <div className="h-6 w-[1px] bg-[#1D2A22] mx-1"></div>
-              <div className="flex items-center gap-3 cursor-pointer group">
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs font-bold text-[#F5F5F5]">System Admin</p>
-                  <p className="text-[10px] text-[#8A938D]">Active</p>
-                </div>
-                <div className="w-9 h-9 rounded-full border border-[#1D2A22] group-hover:border-[#00FF66] transition-colors bg-[#0B0D0C] flex items-center justify-center text-[#00FF66]">
-                  <span className="material-symbols-outlined text-[18px]">shield_person</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
         {/* Page Content */}
         <div className="flex-1 p-8 max-w-[1440px] mx-auto w-full space-y-8 overflow-x-hidden pt-8">
 

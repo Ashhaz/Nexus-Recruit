@@ -216,28 +216,6 @@ export default function AdminSettingsPage() {
       {/* Main ────────────────────────────────────────────────────────────────── */}
       <main className="md:ml-64 flex-1 flex flex-col min-h-screen relative">
 
-        {/* TopNavBar */}
-        <header className="w-full sticky top-0 z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-[#1D2A22] shadow-sm">
-          <div className="flex items-center justify-between px-8 h-16 w-full max-w-container-max mx-auto">
-            <span className="text-xl font-black text-[#00FF66] drop-shadow-[0_0_8px_rgba(0,255,102,0.4)] md:hidden">NEXUS</span>
-            <div className="flex items-center gap-4 ml-auto">
-              <button className="p-2 text-[#8A938D] hover:text-[#00FF66] hover:bg-[#00FF66]/10 rounded-full transition-all">
-                <span className="material-symbols-outlined">notifications</span>
-              </button>
-              <div className="h-6 w-[1px] bg-[#1D2A22] mx-1" />
-              <div className="flex items-center gap-3 cursor-pointer group">
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs font-bold text-[#F5F5F5]">System Admin</p>
-                  <p className="text-[10px] text-[#8A938D] font-semibold uppercase tracking-wider">Active</p>
-                </div>
-                <div className="w-10 h-10 rounded-full border-2 border-[#1D2A22] group-hover:border-[#00FF66]/40 transition-colors bg-[#101412] flex items-center justify-center text-[#00FF66]">
-                  <span className="material-symbols-outlined text-[20px]">shield_person</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
         {/* Canvas */}
         <div className="flex-1 p-8 max-w-4xl mx-auto w-full space-y-6 overflow-x-hidden">
 

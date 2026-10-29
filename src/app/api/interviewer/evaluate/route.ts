@@ -51,23 +51,55 @@ export async function POST(request: Request) {
     };
     const interviewStatus = statusMap[decision] ?? "Pending";
 
-    // Persist evaluation on the Applicant
-    await Applicant.updateOne(
-      { _id: applicantId },
-      {
-        $set: {
-          interviewStatus,
-          finalDecision: decision,
-          interviewNotes: notes,
-          // Store ratings as a nested map so the Results drawer can display them
-          "evaluation.technical":    ratings.technical,
-          "evaluation.communication":ratings.communication,
-          "evaluation.confidence":   ratings.confidence,
-          "evaluation.leadership":   ratings.leadership,
-          "evaluation.teamwork":     ratings.teamwork,
-        },
+    // Read the room's timer state BEFORE clearing it so we can
+    // calculate the actual interview duration.
+    const room = await InterviewRoom.findOne({ roomNumber });
+    let interviewDuration = 0;
+    if (room) {
+      const accumulated = room.accumulatedTime ?? 0;
+      // If the timer is still running (not paused), add the live segment
+      if (room.startedAt && !room.pausedAt) {
+        interviewDuration =
+          accumulated +
+          Math.floor((Date.now() - new Date(room.startedAt).getTime()) / 1000);
+      } else {
+        interviewDuration = accumulated;
       }
+    }
+
+    // If the /workspace/end route already saved a duration, keep the
+    // larger value so we never lose a previously-persisted measurement.
+    const existingApplicant = await Applicant.findById(applicantId).select(
+      "interviewDuration interviewNotes"
     );
+    if (
+      existingApplicant?.interviewDuration &&
+      existingApplicant.interviewDuration > interviewDuration
+    ) {
+      interviewDuration = existingApplicant.interviewDuration;
+    }
+
+    // Build the $set payload — only overwrite notes when the caller
+    // actually provided a non-empty string, so we never blank out
+    // notes that were saved by the "End Interview" step.
+    const updateFields: Record<string, unknown> = {
+      interviewStatus,
+      finalDecision: decision,
+      interviewDuration,
+      // Store ratings as a nested map so the Results drawer can display them
+      "evaluation.technical":     ratings.technical,
+      "evaluation.communication": ratings.communication,
+      "evaluation.confidence":    ratings.confidence,
+      "evaluation.leadership":    ratings.leadership,
+      "evaluation.teamwork":      ratings.teamwork,
+    };
+
+    if (notes && notes.trim().length > 0) {
+      updateFields.interviewNotes = notes;
+    }
+
+    // Persist evaluation on the Applicant
+    await Applicant.updateOne({ _id: applicantId }, { $set: updateFields });
 
     // Free the room (but preserve physical interviewer ownership)
     await InterviewRoom.updateOne(
