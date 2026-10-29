@@ -8,8 +8,11 @@ import CustomCursor from "@/components/ui/CustomCursor";
 interface RoomData {
   _id: string;
   roomNumber: number;
+  name?: string;
   interviewer?: string;
+  assignedInterviewer?: string;
   status: string;
+  isActive?: boolean;
 }
 
 export default function InterviewerDashboardPage() {
@@ -41,9 +44,10 @@ export default function InterviewerDashboardPage() {
   }, []);
 
   const handleSelectRoom = (roomNumber: number) => {
+    const room = rooms.find((r) => r.roomNumber === roomNumber);
     setSelectedRoom(roomNumber);
     setRegisterError("");
-    setInterviewerName("");
+    setInterviewerName(room?.assignedInterviewer || "");
   };
 
   const handleRegister = async () => {
@@ -124,9 +128,10 @@ export default function InterviewerDashboardPage() {
               <div className="w-8 h-8 border-2 border-[#00FF66]/30 border-t-[#00FF66] rounded-full animate-spin"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {rooms.map((room) => {
-                const isAvailable = room.status === "Available";
+                const isDeactivated = room.isActive === false;
+                const isAvailable = room.status === "Available" && !isDeactivated;
                 const isSelected = selectedRoom === room.roomNumber;
                 return (
                   <button
@@ -134,23 +139,36 @@ export default function InterviewerDashboardPage() {
                     onClick={() => handleSelectRoom(room.roomNumber)}
                     disabled={registering || !isAvailable}
                     className={`bg-[#101412] border rounded-xl p-8 flex flex-col items-center justify-center gap-4 transition-all duration-300 group ${
-                      isSelected
+                      isDeactivated
+                        ? "border-[#1D2A22]/50 opacity-40 cursor-not-allowed"
+                        : isSelected
                         ? "border-[#00FF66] shadow-[0_0_20px_rgba(0,255,102,0.15)]"
                         : "border-[#1D2A22] hover:border-[#00FF66]/60 hover:shadow-[0_0_20px_rgba(0,255,102,0.1)] hover:-translate-y-1"
                     } disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0`}
                   >
                     <div className={`w-16 h-16 rounded-full bg-[#0B0D0C] flex items-center justify-center border transition-colors ${
-                      isSelected ? "border-[#00FF66] text-[#00FF66]" : "border-[#1D2A22] group-hover:border-[#00FF66]/40 group-hover:text-[#00FF66] text-[#8A938D]"
+                      isDeactivated
+                        ? "border-[#1D2A22] text-[#8A938D]/40"
+                        : isSelected
+                        ? "border-[#00FF66] text-[#00FF66]"
+                        : "border-[#1D2A22] group-hover:border-[#00FF66]/40 group-hover:text-[#00FF66] text-[#8A938D]"
                     }`}>
                       <span className="material-symbols-outlined text-[32px]">meeting_room</span>
                     </div>
                     <div>
-                      <h2 className="text-xl font-black text-[#F5F5F5] tracking-wide uppercase">
-                        Room {String(room.roomNumber).padStart(2, "0")}
+                      <h2 className="text-xl font-black text-[#F5F5F5] tracking-wide uppercase truncate max-w-[220px]">
+                        {room.name || `Room ${String(room.roomNumber).padStart(2, "0")}`}
                       </h2>
-                      <p className="text-[10px] text-[#8A938D] font-bold mt-1.5 uppercase tracking-widest">
-                        {room.status}
+                      <p className={`text-[10px] font-bold mt-1.5 uppercase tracking-widest ${
+                        isDeactivated ? "text-[#FF4D4D]" : "text-[#8A938D]"
+                      }`}>
+                        {isDeactivated ? "Deactivated" : room.status}
                       </p>
+                      {room.assignedInterviewer && (
+                        <p className="text-[9px] text-[#00FF66]/80 font-semibold uppercase tracking-wider mt-1">
+                          Assigned: {room.assignedInterviewer}
+                        </p>
+                      )}
                     </div>
                     {registering && isSelected && (
                       <div className="mt-2 w-5 h-5 border-2 border-[#00FF66]/30 border-t-[#00FF66] rounded-full animate-spin"></div>

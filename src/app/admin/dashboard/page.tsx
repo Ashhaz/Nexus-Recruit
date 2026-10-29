@@ -34,9 +34,12 @@ interface ApplicantResult {
 interface RoomData {
   _id: string;
   roomNumber: number;
+  name?: string;
   interviewer: string;
+  assignedInterviewer?: string;
   applicant: ApplicantResult | null;
   status: "Available" | "Occupied";
+  isActive?: boolean;
   startedAt: string | null;
 }
 
@@ -225,6 +228,7 @@ export default function AdminDashboardPage() {
   // ── Room card helper ──────────────────────────────────────────────────────
 
   const RoomCard = ({ room }: { room: RoomData }) => {
+    const isDeactivated = room.isActive === false;
     const hasActiveInterview = room.status === "Occupied" && room.applicant !== null;
     const isRegistered = room.interviewer !== "" && room.interviewer !== undefined && room.interviewer !== null;
     const formattedRoomNumber = String(room.roomNumber).padStart(2, "0");
@@ -253,7 +257,9 @@ export default function AdminDashboardPage() {
     return (
       <div 
         className={`bg-[#101412] p-6 rounded-xl flex flex-col gap-4 border transition-all duration-300 shadow-xl relative overflow-hidden ${
-          hasActiveInterview 
+          isDeactivated
+            ? "border-[#1D2A22]/50 opacity-70"
+            : hasActiveInterview 
             ? "border-[#00FF66]/30 shadow-[0_0_15px_rgba(0,255,102,0.05)]" 
             : "border-[#1D2A22]"
         }`}
@@ -263,18 +269,30 @@ export default function AdminDashboardPage() {
         </div>
         
         <div className="flex items-center justify-between z-10">
-          <h4 className="text-sm font-bold text-[#F5F5F5] tracking-widest uppercase">ROOM {formattedRoomNumber}</h4>
+          <h4 className="text-sm font-bold text-[#F5F5F5] tracking-widest uppercase truncate max-w-[170px]">
+            {room.name ? room.name.toUpperCase() : `ROOM ${formattedRoomNumber}`}
+          </h4>
           <span
             className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
-              hasActiveInterview
+              isDeactivated
+                ? "bg-[#FF4D4D]/10 text-[#FF4D4D]"
+                : hasActiveInterview
                 ? "bg-[#00FF66]/10 text-[#00FF66]"
                 : isRegistered
                 ? "bg-[#00FF66]/5 text-[#8A938D]"
                 : "bg-[#8A938D]/10 text-[#8A938D]"
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${hasActiveInterview ? "bg-[#00FF66] animate-pulse" : "bg-[#8A938D]"}`}></span>
-            {hasActiveInterview ? "LIVE" : isRegistered ? "REGISTERED" : "AVAILABLE"}
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isDeactivated
+                  ? "bg-[#FF4D4D]"
+                  : hasActiveInterview
+                  ? "bg-[#00FF66] animate-pulse"
+                  : "bg-[#8A938D]"
+              }`}
+            ></span>
+            {isDeactivated ? "DEACTIVATED" : hasActiveInterview ? "LIVE" : isRegistered ? "REGISTERED" : "AVAILABLE"}
           </span>
         </div>
 
@@ -283,13 +301,13 @@ export default function AdminDashboardPage() {
             <div>
               <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">STATUS</p>
               <p className="font-bold text-[#F5F5F5] uppercase">
-                {hasActiveInterview ? "LIVE" : isRegistered ? "REGISTERED" : "AVAILABLE"}
+                {isDeactivated ? "DEACTIVATED" : hasActiveInterview ? "LIVE" : isRegistered ? "REGISTERED" : "AVAILABLE"}
               </p>
             </div>
             <div>
               <p className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider">INTERVIEWER</p>
               <p className="font-bold text-[#F5F5F5] truncate">
-                {isRegistered ? (room.interviewer || "—") : "—"}
+                {isRegistered ? (room.interviewer || "—") : (room.assignedInterviewer || "—")}
               </p>
             </div>
           </div>
@@ -314,7 +332,11 @@ export default function AdminDashboardPage() {
               {hasActiveInterview ? "INTERVIEW DURATION" : "ACTIVE INTERVIEW"}
             </p>
             <p className={`font-bold ${hasActiveInterview ? "font-mono text-[#00FF66] text-sm" : "text-[#8A938D]"}`}>
-              {hasActiveInterview ? formatTime(elapsed) : "No Active Interview"}
+              {isDeactivated
+                ? "Room Deactivated"
+                : hasActiveInterview
+                ? formatTime(elapsed)
+                : "No Active Interview"}
             </p>
           </div>
         </div>
@@ -509,8 +531,8 @@ export default function AdminDashboardPage() {
               </h3>
             </div>
             {roomsLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[1, 2, 3].map((n) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4].map((n) => (
                   <div key={n} className="bg-[#101412] p-6 rounded-xl flex flex-col gap-4 border border-[#1D2A22] animate-pulse">
                     <div className="h-5 bg-[#0B0D0C] rounded w-1/3"></div>
                     <div className="h-4 bg-[#0B0D0C] rounded w-2/3"></div>
@@ -520,7 +542,7 @@ export default function AdminDashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {rooms.map((room) => (
                   <RoomCard key={room._id} room={room} />
                 ))}

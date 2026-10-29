@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { getAuthSession } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
+import InterviewerProfile from "@/models/InterviewerProfile";
 
 export async function POST(request: Request) {
   try {
@@ -31,15 +32,55 @@ export async function POST(request: Request) {
       );
     }
 
+    await connectToDatabase();
+
+    const room = await InterviewRoom.findOne({ roomNumber: Number(roomNumber) });
+    if (!room) {
+      return NextResponse.json(
+        { success: false, error: "Room not found." },
+        { status: 404 }
+      );
+    }
+
+    if (room.isActive === false) {
+      return NextResponse.json(
+        { success: false, error: `Room ${room.roomNumber} is currently deactivated.` },
+        { status: 400 }
+      );
+    }
+
+    if (room.status !== "Available") {
+      return NextResponse.json(
+        { success: false, error: "Room is not available." },
+        { status: 400 }
+      );
+    }
+
+    // Room-specific access authorization:
+    // If the room has an assigned interviewer, ensure the identity matches (unless admin is conducting)
+    const normalizedInput = interviewerName.trim().toLowerCase();
+    if (
+      room.assignedInterviewer &&
+      room.assignedInterviewer.trim().length > 0 &&
+      session.role !== "admin"
+    ) {
+      if (room.assignedInterviewer.trim().toLowerCase() !== normalizedInput) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Interviewer "${interviewerName}" is not authorized for Room ${room.roomNumber}. Assigned interviewer is "${room.assignedInterviewer}".`,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     // Validate physical interviewer configurations server-side
     const INTERVIEWER_CONFIG: Record<string, string> = {
       [process.env.INTERVIEWER_1_ID || "INT1"]: process.env.INTERVIEWER_1_NAME || "Ahmed",
       [process.env.INTERVIEWER_2_ID || "INT2"]: process.env.INTERVIEWER_2_NAME || "Sarah",
       [process.env.INTERVIEWER_3_ID || "INT3"]: process.env.INTERVIEWER_3_NAME || "Mudabeer",
     };
-
-    // Normalize comparison: case-insensitive, trimmed whitespace
-    const normalizedInput = interviewerName.trim().toLowerCase();
     
     let resolvedInterviewerId: string | null = null;
     let resolvedInterviewerName: string | null = null;
@@ -52,14 +93,37 @@ export async function POST(request: Request) {
       }
     }
 
+    // Also check if matches an existing InterviewerProfile document
+    if (!resolvedInterviewerId) {
+      try {
+        const profile = await InterviewerProfile.findOne({
+          name: { $regex: new RegExp(`^${interviewerName.trim()}$`, "i") },
+        }).lean();
+        if (profile) {
+          resolvedInterviewerId = String(profile._id);
+          resolvedInterviewerName = profile.name;
+        }
+      } catch (err) {
+        console.warn("InterviewerProfile lookup error:", err);
+      }
+    }
+
+    if (!resolvedInterviewerId) {
+      if (
+        room.assignedInterviewer &&
+        room.assignedInterviewer.trim().toLowerCase() === normalizedInput
+      ) {
+        resolvedInterviewerId = room.assignedInterviewerId || `INT_${room.roomNumber}`;
+        resolvedInterviewerName = room.assignedInterviewer;
+      }
+    }
+
     if (!resolvedInterviewerId || !resolvedInterviewerName) {
       return NextResponse.json(
-        { success: false, error: "Physical interviewer name is not authorized." },
+        { success: false, error: `Interviewer "${interviewerName}" is not authorized.` },
         { status: 400 }
       );
     }
-
-    await connectToDatabase();
 
     // Check if this physical interviewer already owns another active room
     const activeRoomForInterviewer = await InterviewRoom.findOne({
@@ -71,24 +135,9 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: `Physical interviewer ${resolvedInterviewerId} already has an active room: Room ${activeRoomForInterviewer.roomNumber}.`,
+          error: `Physical interviewer ${resolvedInterviewerName} already has an active room: Room ${activeRoomForInterviewer.roomNumber}.`,
         },
         { status: 409 }
-      );
-    }
-
-    const room = await InterviewRoom.findOne({ roomNumber: Number(roomNumber) });
-    if (!room) {
-      return NextResponse.json(
-        { success: false, error: "Room not found." },
-        { status: 404 }
-      );
-    }
-
-    if (room.status !== "Available") {
-      return NextResponse.json(
-        { success: false, error: "Room is not available." },
-        { status: 400 }
       );
     }
 

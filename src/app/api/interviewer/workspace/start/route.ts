@@ -24,6 +24,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (room.isActive === false) {
+      return NextResponse.json(
+        { success: false, error: "THIS ROOM IS CURRENTLY DEACTIVATED" },
+        { status: 400 }
+      );
+    }
+
     // Validate that the room is registered to the correct physical interviewer
     if (room.interviewerId !== interviewerId || room.interviewer !== interviewerName) {
       return NextResponse.json(

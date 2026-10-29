@@ -30,6 +30,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (room.isActive === false) {
+      return NextResponse.json(
+        { success: false, error: `Room ${roomNumber} is currently deactivated` },
+        { status: 400 }
+      );
+    }
+
     room.applicant = applicantId as any;
     room.interviewer = interviewer.trim();
     room.status = "Occupied";

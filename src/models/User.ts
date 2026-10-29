@@ -5,6 +5,7 @@ export interface IUser extends Document {
   email: string;
   passwordHash: string;
   role: "Admin" | "Interviewer";
+  clerkId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,6 +16,7 @@ const UserSchema: Schema = new Schema(
     email: { type: String, required: true, unique: true },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["Admin", "Interviewer"], default: "Interviewer" },
+    clerkId: { type: String, default: "" },
   },
   {
     timestamps: true,

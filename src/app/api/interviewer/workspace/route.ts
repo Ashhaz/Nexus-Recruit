@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
 import Applicant from "@/models/Applicant";
+import { getAuthSession } from "@/lib/auth";
 
 export async function GET(request: Request) {
   try {
@@ -15,6 +16,14 @@ export async function GET(request: Request) {
       );
     }
 
+    const session = await getAuthSession();
+    if (session.role === "unauthorized") {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized: Please sign in." },
+        { status: 401 }
+      );
+    }
+
     await connectToDatabase();
 
     const room = await InterviewRoom.findOne({ roomNumber: Number(roomNumber) }).lean();
@@ -23,6 +32,20 @@ export async function GET(request: Request) {
       return NextResponse.json(
         { success: false, error: `Room ${roomNumber} not found.` },
         { status: 404 }
+      );
+    }
+
+    if (session.role !== "interviewer" && session.role !== "admin") {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized: Interviewer or Administrator access required." },
+        { status: 403 }
+      );
+    }
+
+    if (room.isActive === false && session.role !== "admin") {
+      return NextResponse.json(
+        { success: false, error: `Room ${roomNumber} is currently deactivated.` },
+        { status: 403 }
       );
     }
 

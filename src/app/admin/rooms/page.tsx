@@ -19,10 +19,13 @@ interface ApplicantResult {
 interface RoomData {
   _id: string;
   roomNumber: number;
+  name?: string;
   interviewer: string;
   interviewerId: string;
+  assignedInterviewer?: string;
   applicant: ApplicantResult | null;
   status: "Available" | "Occupied";
+  isActive?: boolean;
   startedAt: string | null;
 }
 
@@ -59,9 +62,7 @@ export default function AdminRoomsPage() {
       const res = await fetch("/api/rooms");
       const json = await res.json();
       if (json.success && json.rooms) {
-        // Filter out any rooms beyond Room 3
-        const activeRooms = json.rooms.filter((r: RoomData) => r.roomNumber <= 3);
-        setRooms(activeRooms);
+        setRooms(json.rooms);
       }
     } catch {
       // silently keep previous state
@@ -92,7 +93,13 @@ export default function AdminRoomsPage() {
   }, [fetchRooms, fetchIdentities]);
 
   const handleEnterRoom = async (roomNumber: number) => {
-    const interviewerName = selectedIdentities[roomNumber];
+    const room = rooms.find((r) => r.roomNumber === roomNumber);
+    if (room && room.isActive === false) {
+      showToast("Cannot enter a deactivated room.", "error");
+      return;
+    }
+
+    const interviewerName = selectedIdentities[roomNumber] || room?.assignedInterviewer;
     if (!interviewerName) {
       showToast("Please select an interviewer identity first.", "error");
       return;
@@ -124,6 +131,7 @@ export default function AdminRoomsPage() {
   // ── Room card ─────────────────────────────────────────────────────────────
 
   const RoomCard = ({ room }: { room: RoomData }) => {
+    const isDeactivated = room.isActive === false;
     const hasActiveInterview = room.status === "Occupied" && room.applicant !== null;
     const isRegistered = room.interviewer !== "" && room.interviewer !== undefined && room.interviewer !== null;
     const formattedRoomNumber = String(room.roomNumber).padStart(2, "0");
@@ -153,7 +161,9 @@ export default function AdminRoomsPage() {
     return (
       <div
         className={`bg-[#101412] p-6 rounded-xl flex flex-col gap-5 border transition-all duration-300 shadow-xl relative overflow-hidden group ${
-          hasActiveInterview
+          isDeactivated
+            ? "border-[#1D2A22]/50 opacity-70"
+            : hasActiveInterview
             ? "border-[#00FF66]/30 shadow-[0_0_15px_rgba(0,255,102,0.05)]"
             : "border-[#1D2A22]"
         }`}
@@ -166,18 +176,28 @@ export default function AdminRoomsPage() {
 
         {/* Header */}
         <div className="flex items-center justify-between z-10">
-          <h4 className="text-sm font-bold text-[#F5F5F5] tracking-widest uppercase">
-            ROOM {formattedRoomNumber}
+          <h4 className="text-sm font-bold text-[#F5F5F5] tracking-widest uppercase truncate max-w-[170px]">
+            {room.name ? room.name.toUpperCase() : `ROOM ${formattedRoomNumber}`}
           </h4>
           <span
             className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
-              hasActiveInterview
+              isDeactivated
+                ? "bg-[#FF4D4D]/10 text-[#FF4D4D]"
+                : hasActiveInterview
                 ? "bg-[#00FF66]/10 text-[#00FF66]"
                 : "bg-[#8A938D]/10 text-[#8A938D]"
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${hasActiveInterview ? "bg-[#00FF66] animate-pulse" : "bg-[#8A938D]"}`}></span>
-            {hasActiveInterview ? "LIVE" : "AVAILABLE"}
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isDeactivated
+                  ? "bg-[#FF4D4D]"
+                  : hasActiveInterview
+                  ? "bg-[#00FF66] animate-pulse"
+                  : "bg-[#8A938D]"
+              }`}
+            ></span>
+            {isDeactivated ? "DEACTIVATED" : hasActiveInterview ? "LIVE" : "AVAILABLE"}
           </span>
         </div>
 
@@ -192,7 +212,7 @@ export default function AdminRoomsPage() {
                 </p>
                 <p className="text-sm font-bold text-[#F5F5F5] flex items-center gap-2">
                   <span className="material-symbols-outlined text-xs text-[#8A938D]">person</span>
-                  {room.interviewer || "—"}
+                  {room.interviewer || room.assignedInterviewer || "—"}
                 </p>
               </div>
 
@@ -230,7 +250,7 @@ export default function AdminRoomsPage() {
                 </p>
                 <p className="text-sm font-bold text-[#F5F5F5] flex items-center gap-2">
                   <span className="material-symbols-outlined text-xs text-[#8A938D]">person</span>
-                  {room.interviewer}
+                  {room.interviewer || room.assignedInterviewer || "—"}
                 </p>
               </div>
 
@@ -243,30 +263,39 @@ export default function AdminRoomsPage() {
               {/* Available Room */}
               <div className="space-y-4">
                 <div className="p-4 bg-[#0B0D0C]/40 border border-dashed border-[#1D2A22] rounded-lg text-center py-6">
-                  <p className="text-xs font-bold text-[#8A938D] uppercase tracking-wider">No Active Interview</p>
+                  <p className="text-xs font-bold text-[#8A938D] uppercase tracking-wider">
+                    {isDeactivated ? "Room Deactivated" : "No Active Interview"}
+                  </p>
+                  {room.assignedInterviewer && (
+                    <p className="text-[10px] text-[#8A938D]/70 font-semibold uppercase tracking-wider mt-1">
+                      Assigned: {room.assignedInterviewer}
+                    </p>
+                  )}
                 </div>
 
                 {/* Identity dropdown selection */}
-                <div className="space-y-1.5">
-                  <label className="text-[9px] text-[#8A938D] font-black uppercase tracking-widest block">
-                    Select Physical Identity
-                  </label>
-                  <select
-                    value={selectedIdentities[room.roomNumber] || ""}
-                    onChange={(e) =>
-                      setSelectedIdentities({
-                        ...selectedIdentities,
-                        [room.roomNumber]: e.target.value,
-                      })
-                    }
-                    className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-2.5 py-1.5 text-[11px] text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors font-bold uppercase tracking-wider"
-                  >
-                    <option value="" disabled>-- Choose Interviewer --</option>
-                    {identities.map((id) => (
-                      <option key={id.id} value={id.name}>{id.name}</option>
-                    ))}
-                  </select>
-                </div>
+                {!isDeactivated && (
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] text-[#8A938D] font-black uppercase tracking-widest block">
+                      Select Physical Identity
+                    </label>
+                    <select
+                      value={selectedIdentities[room.roomNumber] || room.assignedInterviewer || ""}
+                      onChange={(e) =>
+                        setSelectedIdentities({
+                          ...selectedIdentities,
+                          [room.roomNumber]: e.target.value,
+                        })
+                      }
+                      className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-2.5 py-1.5 text-[11px] text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors font-bold uppercase tracking-wider"
+                    >
+                      <option value="" disabled>-- Choose Interviewer --</option>
+                      {identities.map((id) => (
+                        <option key={id.id} value={id.name}>{id.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -274,7 +303,15 @@ export default function AdminRoomsPage() {
 
         {/* Buttons */}
         <div className="mt-2 z-10">
-          {hasActiveInterview ? (
+          {isDeactivated ? (
+            <button
+              disabled
+              className="w-full py-2.5 bg-[#0B0D0C] text-[#8A938D] rounded-lg text-[10px] font-bold uppercase tracking-wider border border-[#1D2A22] flex items-center justify-center gap-1.5 opacity-60 cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-[13px]">block</span>
+              Room Deactivated
+            </button>
+          ) : hasActiveInterview ? (
             <Link
               href={`/interviewer/workspace/active?room=${room.roomNumber}`}
               className="w-full py-2.5 bg-[#0B0D0C] hover:bg-[#00FF66] hover:text-[#050505] text-[#F5F5F5] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors border border-[#1D2A22] flex items-center justify-center gap-2 group-hover:border-[#00FF66]/30 shadow-md"
@@ -380,7 +417,7 @@ export default function AdminRoomsPage() {
           {/* Room Grid */}
           {roomsLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((n) => (
+              {[1, 2, 3, 4].map((n) => (
                 <div key={n} className="bg-[#101412] p-6 rounded-xl flex flex-col gap-4 border border-[#1D2A22] animate-pulse">
                   <div className="h-5 bg-[#0B0D0C] rounded w-1/3"></div>
                   <div className="h-16 bg-[#0B0D0C] rounded"></div>
