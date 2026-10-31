@@ -26,7 +26,7 @@ export async function GET() {
 
     try {
       await connectToDatabase();
-      const profiles = await InterviewerProfile.find({}).sort({ name: 1 }).lean();
+      const profiles = await InterviewerProfile.find({ isArchived: { $ne: true } }).sort({ name: 1 }).lean();
       for (const p of profiles) {
         const lower = p.name.toLowerCase();
         if (!identityMap.has(lower)) {

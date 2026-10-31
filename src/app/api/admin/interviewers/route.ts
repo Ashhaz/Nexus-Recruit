@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { getAuthSession } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import InterviewerProfile from "@/models/InterviewerProfile";
 import InterviewRoom from "@/models/InterviewRoom";
+import Applicant from "@/models/Applicant";
 
 export async function GET() {
   try {
@@ -23,8 +25,8 @@ export async function GET() {
       { id: process.env.INTERVIEWER_3_ID || "INT3", name: process.env.INTERVIEWER_3_NAME || "Mudabeer", isDefault: true },
     ];
 
-    // Custom profiles from MongoDB
-    const customProfiles = await InterviewerProfile.find({})
+    // Custom profiles from MongoDB (exclude archived profiles)
+    const customProfiles = await InterviewerProfile.find({ isArchived: { $ne: true } })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -122,6 +124,27 @@ export async function POST(request: Request) {
     });
 
     if (existing) {
+      if (existing.isArchived) {
+        // Restore/unarchive previously removed profile
+        existing.isArchived = false;
+        existing.archivedAt = null;
+        await existing.save();
+
+        return NextResponse.json(
+          {
+            success: true,
+            interviewer: {
+              id: String(existing._id),
+              name: existing.name,
+              role: "Custom Profile",
+              isDefault: false,
+              createdAt: existing.createdAt,
+            },
+          },
+          { status: 200 }
+        );
+      }
+
       return NextResponse.json(
         { success: false, error: `An interviewer named "${trimmedName}" already exists.` },
         { status: 400 }
@@ -131,6 +154,7 @@ export async function POST(request: Request) {
     // Create the interviewer profile in MongoDB
     const newProfile = await InterviewerProfile.create({
       name: trimmedName,
+      isArchived: false,
     });
 
     return NextResponse.json(
@@ -168,16 +192,50 @@ export async function DELETE(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
-    if (!id) {
+    if (!id || !id.trim()) {
       return NextResponse.json(
         { success: false, error: "Interviewer id query param is required." },
         { status: 400 }
       );
     }
 
+    const trimmedId = id.trim();
+
+    // Check default interviewer IDs and names
+    const defaultNames = [
+      (process.env.INTERVIEWER_1_NAME || "Ahmed").trim().toLowerCase(),
+      (process.env.INTERVIEWER_2_NAME || "Amaan").trim().toLowerCase(),
+      (process.env.INTERVIEWER_3_NAME || "Mudabeer").trim().toLowerCase(),
+    ];
+    const defaultIds = [
+      (process.env.INTERVIEWER_1_ID || "INT1").trim().toLowerCase(),
+      (process.env.INTERVIEWER_2_ID || "INT2").trim().toLowerCase(),
+      (process.env.INTERVIEWER_3_ID || "INT3").trim().toLowerCase(),
+    ];
+
+    if (
+      defaultIds.includes(trimmedId.toLowerCase()) ||
+      defaultNames.includes(trimmedId.toLowerCase())
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Cannot delete default system interviewers (Ahmed, Amaan, Mudabeer)." },
+        { status: 400 }
+      );
+    }
+
     await connectToDatabase();
 
-    const profile = await InterviewerProfile.findById(id);
+    // Locate profile by _id or name
+    let profile = null;
+    if (mongoose.Types.ObjectId.isValid(trimmedId)) {
+      profile = await InterviewerProfile.findById(trimmedId);
+    }
+    if (!profile) {
+      profile = await InterviewerProfile.findOne({
+        name: { $regex: new RegExp(`^${trimmedId}$`, "i") },
+      });
+    }
+
     if (!profile) {
       return NextResponse.json(
         { success: false, error: "Interviewer profile not found." },
@@ -185,22 +243,53 @@ export async function DELETE(request: Request) {
       );
     }
 
+    if (defaultNames.includes(profile.name.trim().toLowerCase())) {
+      return NextResponse.json(
+        { success: false, error: "Cannot delete default system interviewers." },
+        { status: 400 }
+      );
+    }
+
     // Safety check: Cannot delete if currently assigned to any room
     const assignedRoom = await InterviewRoom.findOne({
-      assignedInterviewer: { $regex: new RegExp(`^${profile.name}$`, "i") },
+      assignedInterviewer: { $regex: new RegExp(`^${profile.name.trim()}$`, "i") },
     });
 
     if (assignedRoom) {
       return NextResponse.json(
         {
           success: false,
-          error: `Cannot delete "${profile.name}" because they are currently assigned to Room ${assignedRoom.roomNumber}. Unassign them from the room first.`,
+          error: `Cannot remove "${profile.name}" because they are currently assigned to Room ${assignedRoom.roomNumber} (${assignedRoom.name || "Room " + assignedRoom.roomNumber}). Please reassign or unassign the room before proceeding.`,
         },
         { status: 400 }
       );
     }
 
-    await InterviewerProfile.findByIdAndDelete(id);
+    // Safety check: Prevent removal if an active interview is currently ongoing with this interviewer
+    const activeRoom = await InterviewRoom.findOne({
+      interviewer: { $regex: new RegExp(`^${profile.name.trim()}$`, "i") },
+      status: { $ne: "Available" },
+    });
+
+    const activeApplicant = await Applicant.findOne({
+      assignedInterviewer: { $regex: new RegExp(`^${profile.name.trim()}$`, "i") },
+      interviewStatus: "Interviewing",
+    });
+
+    if (activeRoom || activeApplicant) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Cannot remove "${profile.name}" because an interview is currently in progress with this interviewer.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Soft delete / archive to ensure historical interview data integrity
+    profile.isArchived = true;
+    profile.archivedAt = new Date();
+    await profile.save();
 
     return NextResponse.json({
       success: true,

@@ -93,11 +93,12 @@ export async function POST(request: Request) {
       }
     }
 
-    // Also check if matches an existing InterviewerProfile document
+    // Also check if matches an existing active InterviewerProfile document
     if (!resolvedInterviewerId) {
       try {
         const profile = await InterviewerProfile.findOne({
           name: { $regex: new RegExp(`^${interviewerName.trim()}$`, "i") },
+          isArchived: { $ne: true },
         }).lean();
         if (profile) {
           resolvedInterviewerId = String(profile._id);

@@ -9,6 +9,7 @@ export interface IApplicant extends Document {
   branch?: string;
   year?: string;
   teamApplied?: string;
+  source?: string;
   responses: Record<string, string>;
   
   interviewStatus: "Waiting" | "Interviewing" | "Approved" | "Pending" | "Discussion Needed";
@@ -39,6 +40,7 @@ const ApplicantSchema: Schema = new Schema(
     branch: { type: String },
     year: { type: String },
     teamApplied: { type: String },
+    source: { type: String, default: "" },
     responses: { type: Map, of: String, default: {} },
     
     interviewStatus: {
