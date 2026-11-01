@@ -19,6 +19,7 @@ interface ApplicantData {
 }
 
 interface WorkspaceData {
+  activeEvent?: { _id: string; name: string } | null;
   room: {
     roomNumber: number;
     interviewerId: string;
@@ -249,25 +250,46 @@ export default function ActiveInterviewPage() {
     }
   };
 
-  const handleEnd = async () => {
+  const [savingNotes, setSavingNotes] = useState(false);
+
+  const handleProceedToEvaluation = async () => {
+    if (savingNotes) return;
     setIsRunning(false);
     if (!data || !data.applicant) return;
+
+    setSavingNotes(true);
+    const applicantId = data.applicant._id;
+    const interviewer = data.room.interviewer || interviewerName || "";
+
+    // 1. Cache notes in sessionStorage so the evaluation screen has instant access
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(`nexus_interview_notes_${roomNumber}`, notes);
+        sessionStorage.setItem(`nexus_interview_notes_${applicantId}`, notes);
+      } catch (err) {
+        console.error("Failed to store notes in sessionStorage:", err);
+      }
+    }
+
+    // 2. Persist duration and notes to MongoDB via /api/interviewer/workspace/end
     try {
-      const res = await fetch("/api/interviewer/workspace/end", {
+      await fetch("/api/interviewer/workspace/end", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          applicantId: data.applicant._id,
+          applicantId,
           duration: elapsed,
           notes,
         }),
       });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Failed to save duration and notes");
-      router.push(`/interviewer/evaluation?room=${roomNumber}&name=${encodeURIComponent(data.room.interviewer || "")}`);
     } catch (e: any) {
-      alert(e.message);
+      console.error("Failed to persist workspace end state:", e);
     }
+
+    // 3. Navigate to evaluation page with full parameters
+    router.push(
+      `/interviewer/evaluation?room=${roomNumber}&applicantId=${applicantId}&name=${encodeURIComponent(interviewer)}`
+    );
   };
 
   if (error) {
@@ -302,6 +324,13 @@ export default function ActiveInterviewPage() {
           </div>
           {data && (
             <div className="flex items-center gap-3">
+              {data.activeEvent && (
+                <div className="bg-[#101412] px-3.5 py-1.5 rounded-full flex items-center gap-2 border border-[#00FF66]/30 shadow-[0_0_12px_rgba(0,255,102,0.1)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00FF66] animate-pulse" />
+                  <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-wider hidden sm:inline">Event:</span>
+                  <span className="text-xs font-bold text-[#F5F5F5] truncate max-w-[150px] sm:max-w-[200px]">{data.activeEvent.name}</span>
+                </div>
+              )}
               <div className="bg-[#101412] px-4 py-1.5 rounded-full flex items-center gap-2 border border-[#1D2A22]">
                 <span className="text-[9px] font-bold text-[#8A938D] uppercase tracking-wider">Room</span>
                 <span className="text-sm font-black text-[#00FF66]">{data.room.roomNumber}</span>
@@ -382,16 +411,22 @@ export default function ActiveInterviewPage() {
                               <span className="material-symbols-outlined text-sm font-bold">pause</span> Pause
                             </button>
                           )}
-                          <button onClick={handleEnd} className="px-8 py-3 bg-[#FF4D4D] text-[#F5F5F5] hover:bg-[#D32F2F] rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(255,77,77,0.25)]">
+                          <button
+                            onClick={handleProceedToEvaluation}
+                            disabled={savingNotes}
+                            className="px-8 py-3 bg-[#FF4D4D] text-[#F5F5F5] hover:bg-[#D32F2F] rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(255,77,77,0.25)] disabled:opacity-50"
+                          >
                             <span className="material-symbols-outlined text-sm font-bold">stop</span> End Interview
                           </button>
                         </div>
 
                         <button
-                          onClick={() => router.push(`/interviewer/evaluation?room=${roomNumber}&name=${encodeURIComponent(data.room.interviewer || "")}`)}
-                          className="w-full mt-6 py-4 bg-[#00FF66]/10 hover:bg-[#00FF66]/20 border border-[#00FF66]/30 text-[#00FF66] rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
+                          onClick={handleProceedToEvaluation}
+                          disabled={savingNotes}
+                          className="w-full mt-6 py-4 bg-[#00FF66]/10 hover:bg-[#00FF66]/20 border border-[#00FF66]/30 text-[#00FF66] rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
                         >
-                          <span className="material-symbols-outlined text-sm font-bold">assignment_turned_in</span> Begin Evaluation
+                          <span className="material-symbols-outlined text-sm font-bold">assignment_turned_in</span>
+                          {savingNotes ? "Saving & Proceeding..." : "Begin Evaluation"}
                         </button>
                       </>
                     )}
@@ -414,7 +449,18 @@ export default function ActiveInterviewPage() {
                     <textarea
                       id="notes"
                       value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNotes(val);
+                        if (typeof window !== "undefined") {
+                          try {
+                            sessionStorage.setItem(`nexus_interview_notes_${roomNumber}`, val);
+                            if (data?.applicant?._id) {
+                              sessionStorage.setItem(`nexus_interview_notes_${data.applicant._id}`, val);
+                            }
+                          } catch (_) {}
+                        }
+                      }}
                       disabled={isReadOnly}
                       placeholder={isReadOnly ? "No notes available in view mode." : "Type observations during the interview..."}
                       className="flex-1 w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg px-4 py-3 text-sm text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"

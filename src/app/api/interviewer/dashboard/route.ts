@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
 import Applicant from "@/models/Applicant";
+import { getActiveEventSource } from "@/lib/activeEvent";
 
 /**
  * GET /api/interviewer/dashboard?name=Mudabeer
@@ -66,9 +67,11 @@ export async function GET(request: Request) {
 
     // interviewStatus drives the "started" flag
     const started = (applicant as any).interviewStatus === "Interviewing";
+    const activeEvent = await getActiveEventSource();
 
     return NextResponse.json({
       success: true,
+      activeEvent: activeEvent ? { _id: String(activeEvent._id), name: activeEvent.name } : null,
       interviewer: { name: room.interviewer },
       room: {
         roomNumber: room.roomNumber,

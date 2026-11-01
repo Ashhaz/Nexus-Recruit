@@ -3,6 +3,7 @@ import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
 import Applicant from "@/models/Applicant";
 import { getAuthSession } from "@/lib/auth";
+import { getActiveEventSource } from "@/lib/activeEvent";
 
 export async function GET(request: Request) {
   try {
@@ -49,9 +50,12 @@ export async function GET(request: Request) {
       );
     }
 
+    const activeEvent = await getActiveEventSource();
+
     if (!room.applicant) {
       return NextResponse.json({
         success: true,
+        activeEvent: activeEvent ? { _id: String(activeEvent._id), name: activeEvent.name } : null,
         room: {
           roomNumber: room.roomNumber,
           interviewerId: room.interviewerId ?? "",
@@ -75,6 +79,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
+      activeEvent: activeEvent ? { _id: String(activeEvent._id), name: activeEvent.name } : null,
       room: {
         roomNumber: room.roomNumber,
         interviewerId: room.interviewerId ?? "",

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuthSession } from "@/lib/auth";
+import AdminLayoutClient from "@/components/admin/AdminLayoutClient";
 
 export default async function AdminLayout({
   children,
@@ -12,5 +13,5 @@ export default async function AdminLayout({
     redirect(session.role === "interviewer" ? "/interviewer/dashboard" : "/login");
   }
 
-  return <>{children}</>;
+  return <AdminLayoutClient>{children}</AdminLayoutClient>;
 }

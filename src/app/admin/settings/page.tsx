@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/ui/LogoutButton";
 import CustomCursor from "@/components/ui/CustomCursor";
+import AdminSidebar from "@/components/admin/AdminSidebar";
+import EventWorkspaceBanner from "@/components/admin/EventWorkspaceBanner";
+import { useEvent } from "@/context/EventContext";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,13 +65,17 @@ interface SheetSourceData {
     updated: number;
     skipped: number;
   } | null;
+  applicantCount?: number;
   isDefault?: boolean;
+  isGloballyActive?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function AdminSettingsPage() {
   const pathname = usePathname();
+  const { activeEventId, setActiveEvent } = useEvent();
+  const [isSettingActive, setIsSettingActive] = useState<string | null>(null);
 
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
@@ -159,6 +166,30 @@ export default function AdminSettingsPage() {
   } | null>(null);
   const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
 
+  // ── Evaluation Configuration State ───────────────────────────────────────
+  const [evalCriteria, setEvalCriteria] = useState<Array<{ id: string; name: string; maxScore: number }>>([]);
+  const [evalLoading, setEvalLoading] = useState(true);
+  const [evalSaving, setEvalSaving] = useState(false);
+  const [newCriterionName, setNewCriterionName] = useState("");
+  const [newCriterionMaxScore, setNewCriterionMaxScore] = useState<number>(10);
+  const [hasEvalChanges, setHasEvalChanges] = useState(false);
+
+  const loadEvalConfig = useCallback(async () => {
+    setEvalLoading(true);
+    try {
+      const res = await fetch("/api/evaluation-config");
+      const json = await res.json();
+      if (json.success && Array.isArray(json.criteria)) {
+        setEvalCriteria(json.criteria);
+        setHasEvalChanges(false);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setEvalLoading(false);
+    }
+  }, []);
+
   // ── Load rooms & identities ───────────────────────────────────────────────
   const loadRooms = useCallback(async () => {
     setRoomsLoading(true);
@@ -226,7 +257,8 @@ export default function AdminSettingsPage() {
     loadIdentities();
     loadInterviewers();
     loadSheetSources();
-  }, [loadSettings, loadRooms, loadIdentities, loadInterviewers, loadSheetSources]);
+    loadEvalConfig();
+  }, [loadSettings, loadRooms, loadIdentities, loadInterviewers, loadSheetSources, loadEvalConfig]);
 
   const handleCreateInterviewer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -565,9 +597,27 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const handleSetActiveEvent = async (source: SheetSourceData) => {
+    setIsSettingActive(source._id);
+    try {
+      await setActiveEvent(source._id);
+      await loadSheetSources();
+      showToast(`"${source.name}" is now the global active recruitment event.`, "success");
+    } catch (err: any) {
+      showToast(err.message || "Failed to set active event.", "error");
+    } finally {
+      setIsSettingActive(null);
+    }
+  };
+
   const handleDeleteSheet = async (source: SheetSourceData) => {
     if (source.isDefault) {
       showToast("The default primary sheet cannot be deleted.", "error");
+      return;
+    }
+
+    if (source.isGloballyActive || source._id === activeEventId) {
+      showToast("Cannot delete the currently active event. Please set another event as active first.", "error");
       return;
     }
 
@@ -701,12 +751,126 @@ export default function AdminSettingsPage() {
     }
   };
 
+  // ── Evaluation Configuration Handlers ─────────────────────────────────────
+
+  const handleAddCriterion = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const name = newCriterionName.trim();
+    if (!name) {
+      showToast("Criterion name cannot be empty.", "error");
+      return;
+    }
+    if (evalCriteria.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+      showToast(`Criterion "${name}" already exists.`, "error");
+      return;
+    }
+    const maxScore = Number(newCriterionMaxScore) > 0 ? Number(newCriterionMaxScore) : 10;
+    const newCrit = {
+      id: `crit_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name,
+      maxScore,
+    };
+    setEvalCriteria(prev => [...prev, newCrit]);
+    setNewCriterionName("");
+    setNewCriterionMaxScore(10);
+    setHasEvalChanges(true);
+  };
+
+  const handleUpdateCriterionName = (index: number, newName: string) => {
+    setEvalCriteria(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], name: newName };
+      return copy;
+    });
+    setHasEvalChanges(true);
+  };
+
+  const handleUpdateCriterionMaxScore = (index: number, maxVal: number) => {
+    const val = Number(maxVal) > 0 ? Math.floor(Number(maxVal)) : 10;
+    setEvalCriteria(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], maxScore: val };
+      return copy;
+    });
+    setHasEvalChanges(true);
+  };
+
+  const handleDeleteCriterion = (index: number) => {
+    if (evalCriteria.length <= 1) {
+      showToast("At least one evaluation criterion is required.", "error");
+      return;
+    }
+    setEvalCriteria(prev => prev.filter((_, i) => i !== index));
+    setHasEvalChanges(true);
+  };
+
+  const handleMoveCriterion = (index: number, direction: "up" | "down") => {
+    if (direction === "up" && index === 0) return;
+    if (direction === "down" && index === evalCriteria.length - 1) return;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    setEvalCriteria(prev => {
+      const copy = [...prev];
+      const temp = copy[index];
+      copy[index] = copy[targetIndex];
+      copy[targetIndex] = temp;
+      return copy;
+    });
+    setHasEvalChanges(true);
+  };
+
+  const handleSaveEvalConfig = async () => {
+    if (evalCriteria.length === 0) {
+      showToast("At least one criterion is required.", "error");
+      return;
+    }
+    for (let i = 0; i < evalCriteria.length; i++) {
+      if (!evalCriteria[i].name.trim()) {
+        showToast(`Criterion #${i + 1} cannot have an empty name.`, "error");
+        return;
+      }
+    }
+    const names = evalCriteria.map(c => c.name.trim().toLowerCase());
+    if (new Set(names).size !== names.length) {
+      showToast("Each criterion must have a unique name.", "error");
+      return;
+    }
+
+    setEvalSaving(true);
+    try {
+      const res = await fetch("/api/evaluation-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ criteria: evalCriteria }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Failed to save configuration.");
+      setEvalCriteria(json.criteria);
+      setHasEvalChanges(false);
+      showToast("Evaluation configuration saved successfully.", "success");
+    } catch (err: any) {
+      showToast(err.message || "Failed to save evaluation configuration.", "error");
+    } finally {
+      setEvalSaving(false);
+    }
+  };
+
+  const handleResetEvalDefaults = () => {
+    setEvalCriteria([
+      { id: "technical", name: "Technical", maxScore: 10 },
+      { id: "communication", name: "Communication", maxScore: 10 },
+      { id: "confidence", name: "Confidence", maxScore: 10 },
+      { id: "leadership", name: "Leadership", maxScore: 10 },
+      { id: "teamwork", name: "Teamwork", maxScore: 10 },
+    ]);
+    setHasEvalChanges(true);
+  };
+
   // ── Refresh Statistics ─────────────────────────────────────────────────────
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await loadSettings();
+      await Promise.all([loadSettings(), loadEvalConfig()]);
       showToast("Statistics refreshed successfully.", "success");
     } catch {
       showToast("Failed to refresh statistics.", "error");
@@ -790,51 +954,14 @@ export default function AdminSettingsPage() {
       <CustomCursor />
 
       {/* SideNavBar ────────────────────────────────────────────────────────── */}
-      <aside className="w-64 fixed left-0 top-0 z-40 bg-[#0B0D0C] border-r border-[#1D2A22] shadow-2xl flex-col h-full py-8 hidden md:flex">
-        <div className="px-6 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#00FF66] flex items-center justify-center text-[#050505] shadow-[0_0_12px_rgba(0,255,102,0.4)]">
-              <span className="material-symbols-outlined text-[20px] font-bold">terminal</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-black text-[#F5F5F5] tracking-wider">NEXUS</h1>
-              <p className="text-[9px] font-bold tracking-widest text-[#8A938D] uppercase">Recruitment Engine</p>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1 space-y-1.5 px-4 overflow-y-auto">
-          {[
-            { href: "/admin/dashboard",  icon: "dashboard",            label: "Dashboard" },
-            { href: "/admin/applicants", icon: "group",                label: "Applicants" },
-            { href: "/admin/rooms",      icon: "terminal",             label: "Rooms" },
-            { href: "/admin/results",    icon: "assignment_turned_in", label: "Results" },
-            { href: "/admin/analytics",  icon: "analytics",            label: "Analytics" },
-            { href: "/admin/settings",   icon: "settings",             label: "Settings" },
-          ].map(({ href, icon, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${
-                pathname === href
-                  ? "bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]"
-                  : "text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1"
-              }`}
-            >
-              <span className="material-symbols-outlined text-lg">{icon}</span>
-              <span className="text-xs font-bold uppercase tracking-wider">{label}</span>
-            </Link>
-          ))}
-        </nav>
-        <div className="px-4 mt-auto">
-          <LogoutButton />
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main ────────────────────────────────────────────────────────────────── */}
       <main className="md:ml-64 flex-1 flex flex-col min-h-screen relative">
 
         {/* Canvas */}
         <div className="flex-1 p-8 max-w-4xl mx-auto w-full space-y-6 overflow-x-hidden">
+          <EventWorkspaceBanner />
 
           {/* Page header */}
           <div className="mb-2">
@@ -1448,7 +1575,186 @@ export default function AdminSettingsPage() {
             )}
           </section>
 
-          {/* ── 5. Google Sheets Integration ─────────────────────────────────── */}
+          {/* ── 5. Evaluation Configuration ─────────────────────────────────── */}
+          <section className="glass-card p-6 rounded-xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-[#00FF66]/10 flex items-center justify-center flex-shrink-0 border border-[#00FF66]/20">
+                  <span className="material-symbols-outlined text-[#00FF66] text-[20px] font-bold">tune</span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-[#F5F5F5]">Evaluation Configuration</h3>
+                  <p className="text-[10px] text-[#8A938D] font-semibold uppercase tracking-wider mt-0.5">
+                    Global evaluation criteria and scoring scale applied to all interview workspaces across all events
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={handleResetEvalDefaults}
+                  disabled={evalSaving}
+                  className="px-3 py-2 bg-[#101412] hover:bg-[#151D18] text-[#8A938D] hover:text-[#F5F5F5] border border-[#1D2A22] rounded-lg text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40"
+                  title="Reset to default 5 criteria"
+                >
+                  Reset Defaults
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEvalConfig}
+                  disabled={evalSaving || (!hasEvalChanges && evalCriteria.length > 0)}
+                  className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md ${
+                    hasEvalChanges
+                      ? "bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] shadow-[0_0_15px_rgba(0,255,102,0.35)] animate-pulse"
+                      : "bg-[#00FF66]/20 text-[#00FF66] border border-[#00FF66]/30 hover:bg-[#00FF66]/30"
+                  } disabled:opacity-40 disabled:cursor-not-allowed`}
+                >
+                  <span className="material-symbols-outlined text-[16px] font-bold">
+                    {evalSaving ? "hourglass_top" : "save"}
+                  </span>
+                  {evalSaving ? "Saving..." : hasEvalChanges ? "Save Changes *" : "Saved"}
+                </button>
+              </div>
+            </div>
+
+            {/* Criteria List */}
+            {evalLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <div key={n} className="h-16 bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg animate-pulse" />
+                ))}
+              </div>
+            ) : evalCriteria.length === 0 ? (
+              <div className="p-8 text-center bg-[#0B0D0C]/30 border border-dashed border-[#1D2A22] rounded-lg">
+                <p className="text-xs text-[#8A938D] font-bold uppercase tracking-wider">No criteria configured.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {evalCriteria.map((criterion, idx) => (
+                  <div
+                    key={criterion.id || idx}
+                    className="p-3.5 rounded-xl border border-[#1D2A22] bg-[#0B0D0C]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#1D2A22]/90 transition-all"
+                  >
+                    {/* Left: Reordering & Rank */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="w-6 h-6 rounded-md bg-[#101412] border border-[#1D2A22] text-[#8A938D] text-[10px] font-mono font-bold flex items-center justify-center">
+                        #{idx + 1}
+                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveCriterion(idx, "up")}
+                          disabled={idx === 0 || evalSaving}
+                          className="w-6 h-4 rounded bg-[#101412] hover:bg-[#1A261F] text-[#8A938D] hover:text-[#00FF66] border border-[#1D2A22] flex items-center justify-center text-[10px] disabled:opacity-20 disabled:hover:text-[#8A938D] transition-colors"
+                          title="Move Up"
+                        >
+                          <span className="material-symbols-outlined text-[13px] leading-none">arrow_drop_up</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveCriterion(idx, "down")}
+                          disabled={idx === evalCriteria.length - 1 || evalSaving}
+                          className="w-6 h-4 rounded bg-[#101412] hover:bg-[#1A261F] text-[#8A938D] hover:text-[#00FF66] border border-[#1D2A22] flex items-center justify-center text-[10px] disabled:opacity-20 disabled:hover:text-[#8A938D] transition-colors"
+                          title="Move Down"
+                        >
+                          <span className="material-symbols-outlined text-[13px] leading-none">arrow_drop_down</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Middle: Name Input & Max Score Input */}
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                      <div className="sm:col-span-2">
+                        <label className="text-[9px] uppercase tracking-wider text-[#8A938D] font-bold block mb-1">
+                          Criterion Name
+                        </label>
+                        <input
+                          type="text"
+                          value={criterion.name}
+                          onChange={(e) => handleUpdateCriterionName(idx, e.target.value)}
+                          placeholder="e.g. Technical, Problem Solving"
+                          className="w-full bg-[#101412] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs font-bold text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] outline-none transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] uppercase tracking-wider text-[#8A938D] font-bold block mb-1">
+                          Max Score
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={criterion.maxScore || 10}
+                            onChange={(e) => handleUpdateCriterionMaxScore(idx, Number(e.target.value))}
+                            className="w-full bg-[#101412] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs font-mono font-bold text-[#00FF66] focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] outline-none transition-all"
+                          />
+                          <span className="absolute right-2.5 top-2 text-[10px] text-[#8A938D] pointer-events-none font-bold">
+                            PTS
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Delete button */}
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCriterion(idx)}
+                        disabled={evalCriteria.length <= 1 || evalSaving}
+                        className="p-2 bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border border-[#FF4D4D]/20 hover:border-[#FF4D4D]/40 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
+                        title={evalCriteria.length <= 1 ? "At least one criterion is required" : `Delete "${criterion.name}"`}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add Criterion Sub-Form */}
+            <form
+              onSubmit={handleAddCriterion}
+              className="p-4 rounded-xl border border-dashed border-[#1D2A22] bg-[#0B0D0C]/40 flex flex-col sm:flex-row sm:items-end gap-3"
+            >
+              <div className="flex-1">
+                <label className="text-[9px] uppercase tracking-wider text-[#8A938D] font-bold block mb-1">
+                  Add New Criterion Name
+                </label>
+                <input
+                  type="text"
+                  value={newCriterionName}
+                  onChange={(e) => setNewCriterionName(e.target.value)}
+                  placeholder="e.g. Creativity, Critical Thinking"
+                  className="w-full bg-[#101412] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs font-semibold text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] outline-none transition-all"
+                />
+              </div>
+              <div className="w-full sm:w-28">
+                <label className="text-[9px] uppercase tracking-wider text-[#8A938D] font-bold block mb-1">
+                  Max Score
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={newCriterionMaxScore}
+                  onChange={(e) => setNewCriterionMaxScore(Math.max(1, Number(e.target.value)))}
+                  className="w-full bg-[#101412] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs font-mono font-bold text-[#00FF66] focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] outline-none transition-all"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!newCriterionName.trim() || evalSaving}
+                className="px-4 py-2 bg-[#00FF66]/10 hover:bg-[#00FF66]/20 text-[#00FF66] border border-[#00FF66]/30 hover:border-[#00FF66]/60 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed self-stretch sm:self-auto h-[38px]"
+              >
+                <span className="material-symbols-outlined text-[16px] font-bold">add</span>
+                Add Criterion
+              </button>
+            </form>
+          </section>
+
+          {/* ── 6. Google Sheets Integration ─────────────────────────────────── */}
           <section className="glass-card p-6 rounded-xl space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
@@ -1469,19 +1775,6 @@ export default function AdminSettingsPage() {
                 >
                   <span className="material-symbols-outlined text-[16px] font-bold">add_link</span>
                   Add Spreadsheet
-                </button>
-                <button
-                  onClick={handleSync}
-                  disabled={isSyncing}
-                  className="px-3.5 py-2 bg-[#0B0D0C] hover:bg-[#101412] hover:text-[#00FF66] border border-[#1D2A22] text-[#8A938D] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
-                  title="Sync all active configured sources"
-                >
-                  {isSyncing ? (
-                    <div className="w-3.5 h-3.5 border-2 border-[#8A938D]/30 border-t-[#00FF66] rounded-full animate-spin" />
-                  ) : (
-                    <span className="material-symbols-outlined text-[16px]">sync</span>
-                  )}
-                  Sync All
                 </button>
               </div>
             </div>
@@ -1538,12 +1831,15 @@ export default function AdminSettingsPage() {
                   const isLoading = loadingSheetId === source._id;
                   const isPreviewing = previewLoadingId === source._id;
                   const isDeactivated = !source.isActive;
+                  const isGloballyActive = Boolean(source.isGloballyActive || source._id === activeEventId);
 
                   return (
                     <div
                       key={source._id}
                       className={`p-4 rounded-xl border transition-all ${
-                        isDeactivated
+                        isGloballyActive
+                          ? "border-[#00FF66]/80 bg-[#00FF66]/[0.03] shadow-[0_0_20px_rgba(0,255,102,0.12)] ring-1 ring-[#00FF66]/40"
+                          : isDeactivated
                           ? "border-[#1D2A22]/50 bg-[#0B0D0C]/20 opacity-60"
                           : "border-[#1D2A22] bg-[#0B0D0C]/50 hover:border-[#1D2A22]/80"
                       }`}
@@ -1552,14 +1848,16 @@ export default function AdminSettingsPage() {
                         {/* Source Details */}
                         <div className="flex items-start gap-3 min-w-0">
                           <div className={`w-10 h-10 rounded-lg border flex items-center justify-center flex-shrink-0 ${
-                            source.status === "Connected"
+                            isGloballyActive
+                              ? "bg-[#00FF66]/20 border-[#00FF66] text-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.3)]"
+                              : source.status === "Connected"
                               ? "bg-[#00FF66]/10 border-[#00FF66]/30 text-[#00FF66]"
                               : source.status === "Error"
                               ? "bg-[#FF4D4D]/10 border-[#FF4D4D]/30 text-[#FF4D4D]"
                               : "bg-[#101412] border-[#1D2A22] text-[#8A938D]"
                           }`}>
                             <span className="material-symbols-outlined text-[20px]">
-                              {source.status === "Connected" ? "check_circle" : source.status === "Error" ? "error" : "draft"}
+                              {isGloballyActive ? "stars" : source.status === "Connected" ? "check_circle" : source.status === "Error" ? "error" : "draft"}
                             </span>
                           </div>
 
@@ -1568,6 +1866,12 @@ export default function AdminSettingsPage() {
                               <h4 className="text-sm font-bold text-[#F5F5F5] uppercase tracking-wide">
                                 {source.name}
                               </h4>
+                              {isGloballyActive && (
+                                <span className="px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-[#00FF66] text-[#050505] shadow-[0_0_10px_rgba(0,255,102,0.4)] flex items-center gap-1 font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#050505] animate-pulse" />
+                                  Active Event
+                                </span>
+                              )}
                               {source.isDefault && (
                                 <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/20">
                                   Default Source
@@ -1583,6 +1887,10 @@ export default function AdminSettingsPage() {
                                 }`}
                               >
                                 {source.status}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/20 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[10px]">group</span>
+                                {source.applicantCount ?? 0} Applicants
                               </span>
                               {!source.isActive && (
                                 <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-[#FFB020]/10 text-[#FFB020] border border-[#FFB020]/20">
@@ -1636,6 +1944,39 @@ export default function AdminSettingsPage() {
 
                         {/* Actions */}
                         <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+                          {/* Global Active Event Action */}
+                          {isGloballyActive ? (
+                            <span className="px-3 py-1.5 bg-[#00FF66]/15 border border-[#00FF66]/40 text-[#00FF66] rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 select-none shadow-[0_0_10px_rgba(0,255,102,0.15)]">
+                              <span className="material-symbols-outlined text-[14px] font-bold">check_circle</span>
+                              Currently Active
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleSetActiveEvent(source)}
+                              disabled={isSettingActive === source._id || isDeactivated}
+                              className="px-3 py-1.5 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.25)] hover:shadow-[0_0_18px_rgba(0,255,102,0.4)] disabled:opacity-40 cursor-pointer"
+                              title={`Set "${source.name}" as the single global active recruitment event across the engine`}
+                            >
+                              {isSettingActive === source._id ? (
+                                <div className="w-3.5 h-3.5 border-2 border-[#050505]/30 border-t-[#050505] rounded-full animate-spin" />
+                              ) : (
+                                <span className="material-symbols-outlined text-[14px] font-bold">radio_button_checked</span>
+                              )}
+                              {isSettingActive === source._id ? "Activating..." : "Set as Active Event"}
+                            </button>
+                          )}
+
+                          <Link
+                            href={`/admin/dashboard?eventId=${source._id}`}
+                            className="px-3 py-1.5 bg-[#101412] hover:bg-[#1A201D] text-[#8A938D] hover:text-[#00FF66] border border-[#1D2A22] hover:border-[#00FF66]/30 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 group/btn"
+                            title={`Open dedicated workspace for ${source.name}`}
+                          >
+                            <span className="material-symbols-outlined text-[14px] group-hover/btn:translate-x-0.5 transition-transform">
+                              launch
+                            </span>
+                            Workspace
+                          </Link>
+
                           <button
                             onClick={() => handleTestSheet(source)}
                             disabled={isTesting}
@@ -1661,11 +2002,11 @@ export default function AdminSettingsPage() {
                           <button
                             onClick={() => handleLoadSheet(source._id, source.name)}
                             disabled={isLoading || isDeactivated}
-                            className="px-3 py-1.5 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,102,0.2)] disabled:opacity-40 font-black"
+                            className="px-3 py-1.5 bg-[#00FF66]/10 text-[#00FF66] hover:bg-[#00FF66]/20 border border-[#00FF66]/30 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 disabled:opacity-40 font-black"
                             title="Import rows from this sheet into database"
                           >
                             {isLoading ? (
-                              <div className="w-3 h-3 border-2 border-[#050505]/30 border-t-[#050505] rounded-full animate-spin" />
+                              <div className="w-3 h-3 border-2 border-[#00FF66]/30 border-t-[#00FF66] rounded-full animate-spin" />
                             ) : (
                               <span className="material-symbols-outlined text-[14px] font-bold">download</span>
                             )}
@@ -1697,8 +2038,17 @@ export default function AdminSettingsPage() {
                           {!source.isDefault && (
                             <button
                               onClick={() => handleDeleteSheet(source)}
-                              className="p-1.5 bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border border-[#FF4D4D]/20 rounded-lg text-[10px] transition-colors"
-                              title="Delete source configuration"
+                              disabled={isGloballyActive}
+                              className={`p-1.5 border rounded-lg text-[10px] transition-colors ${
+                                isGloballyActive
+                                  ? "bg-[#1D2A22]/20 border-[#1D2A22] text-[#8A938D]/30 cursor-not-allowed"
+                                  : "bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border-[#FF4D4D]/20"
+                              }`}
+                              title={
+                                isGloballyActive
+                                  ? "Cannot delete the currently active event. Choose another active event first."
+                                  : "Delete source configuration"
+                              }
                             >
                               <span className="material-symbols-outlined text-[14px]">delete</span>
                             </button>

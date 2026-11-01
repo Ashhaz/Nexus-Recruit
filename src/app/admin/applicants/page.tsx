@@ -1,18 +1,30 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/ui/LogoutButton";
 import CustomCursor from "@/components/ui/CustomCursor";
+import AdminSidebar from "@/components/admin/AdminSidebar";
+import EventWorkspaceBanner from "@/components/admin/EventWorkspaceBanner";
+import { useEvent } from "@/context/EventContext";
 
 // Define shape based on MongoDB schema
+interface EvaluationCriterionSnapshot {
+  id: string;
+  label: string;
+  score: number;
+  maxScore: number;
+}
+
 interface Evaluation {
   technical?: number | null;
   communication?: number | null;
   confidence?: number | null;
   leadership?: number | null;
   teamwork?: number | null;
+  criteriaSnapshot?: EvaluationCriterionSnapshot[];
+  submittedAt?: string;
 }
 
 interface ApplicantData {
@@ -25,6 +37,8 @@ interface ApplicantData {
   branch?: string;
   year?: string;
   teamApplied?: string;
+  source?: string;
+  eventId?: string;
   responses: Record<string, string>;
   interviewStatus: "Waiting" | "Interviewing" | "Approved" | "Pending" | "Discussion Needed";
   assignedRoom?: number | null;
@@ -41,29 +55,33 @@ type StatusType = "ALL" | "WAITING" | "INTERVIEWING" | "APPROVED" | "PENDING" | 
 export default function AdminApplicantsPage() {
   const pathname = usePathname();
   const [query, setQuery] = useState("");
+  const { eventId } = useEvent();
   const [applicants, setApplicants] = useState<ApplicantData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<StatusType>("ALL");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // Fetch all applicants on mount
-  useEffect(() => {
-    async function fetchApplicants() {
-      try {
-        setIsLoading(true);
-        const res = await fetch("/api/dashboard/applicants");
-        const data = await res.json();
-        if (data.success && data.applicants) {
-          setApplicants(data.applicants);
-        }
-      } catch (err) {
-        console.error("Failed to fetch applicants:", err);
-      } finally {
-        setIsLoading(false);
+  const fetchApplicants = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const url = eventId
+        ? `/api/dashboard/applicants?eventId=${encodeURIComponent(eventId)}`
+        : "/api/dashboard/applicants";
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success && data.applicants) {
+        setApplicants(data.applicants);
       }
+    } catch (err) {
+      console.error("Failed to fetch applicants:", err);
+    } finally {
+      setIsLoading(false);
     }
+  }, [eventId]);
+
+  useEffect(() => {
     fetchApplicants();
-  }, []);
+  }, [fetchApplicants]);
 
   // Calculate status counts based on real database applicants
   const counts = {
@@ -127,56 +145,15 @@ export default function AdminApplicantsPage() {
       <CustomCursor />
 
       {/* SideNavBar - Admin */}
-      <aside className="w-64 fixed left-0 top-0 z-40 bg-[#0B0D0C] border-r border-[#1D2A22] shadow-2xl flex flex-col h-full py-6 hidden md:flex">
-        <div className="px-6 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#00FF66] flex items-center justify-center text-[#050505] shadow-[0_0_12px_rgba(0,255,102,0.4)]">
-              <span className="material-symbols-outlined text-[20px] font-bold">terminal</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-black text-[#F5F5F5] tracking-wider">NEXUS</h1>
-              <p className="text-[9px] font-bold tracking-widest text-[#8A938D] uppercase">Recruitment Engine</p>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1 space-y-1.5 px-4 overflow-y-auto">
-          <Link href="/admin/dashboard" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/dashboard' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">dashboard</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Dashboard</span>
-          </Link>
-          <Link href="/admin/applicants" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/applicants' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">group</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Applicants</span>
-          </Link>
-          <Link href="/admin/rooms" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/rooms' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">terminal</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Rooms</span>
-          </Link>
-          <Link href="/admin/results" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/results' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">assignment_turned_in</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Results</span>
-          </Link>
-          <Link href="/admin/analytics" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/analytics' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">analytics</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Analytics</span>
-          </Link>
-          <Link href="/admin/settings" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/settings' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">settings</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Settings</span>
-          </Link>
-        </nav>
-        <div className="px-4 mt-auto">
-          <div className="space-y-1">
-            <LogoutButton />
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content Area */}
       <main className="md:ml-64 flex-1 min-h-screen flex flex-col relative">
 
         {/* Page Content */}
         <div className="flex-1 p-8 max-w-[1440px] mx-auto w-full space-y-6 overflow-x-hidden pt-8">
+          <EventWorkspaceBanner />
+
           {/* Page Header */}
           <div>
             <h2 className="text-2xl font-black tracking-wide text-[#F5F5F5] uppercase">
@@ -247,6 +224,7 @@ export default function AdminApplicantsPage() {
                     <tr className="bg-[#0B0D0C] border-b border-[#1D2A22]">
                       <th className="p-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Applicant</th>
                       <th className="p-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Roll Number</th>
+                      <th className="p-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Event</th>
                       <th className="p-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Department</th>
                       <th className="p-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Status</th>
                       <th className="p-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Interviewer</th>
@@ -274,6 +252,11 @@ export default function AdminApplicantsPage() {
                               <td className="p-4 font-mono text-xs text-[#8A938D]">
                                 {applicant.rollNumber}
                               </td>
+                              <td className="p-4 text-xs">
+                                <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/20 inline-block">
+                                  {applicant.source || "Default"}
+                                </span>
+                              </td>
                               <td className="p-4 text-xs text-[#8A938D]">
                                 {applicant.department || "—"}
                               </td>
@@ -298,7 +281,7 @@ export default function AdminApplicantsPage() {
                             </tr>
                             {isExpanded && (
                               <tr>
-                                <td colSpan={7} className="p-0 bg-[#0B0D0C]/40 border-t border-[#1D2A22]/30">
+                                <td colSpan={8} className="p-0 bg-[#0B0D0C]/40 border-t border-[#1D2A22]/30">
                                   <ExpandedDetailPane applicant={applicant} />
                                 </td>
                               </tr>
@@ -308,7 +291,7 @@ export default function AdminApplicantsPage() {
                       })
                     ) : (
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-[#8A938D] text-xs">
+                        <td colSpan={8} className="p-8 text-center text-[#8A938D] text-xs">
                           No applicants found matching current criteria.
                         </td>
                       </tr>
@@ -339,6 +322,7 @@ export default function AdminApplicantsPage() {
                           </span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-[11px] text-[#8A938D]">
+                          <div><span className="font-semibold text-[#00FF66]">Event:</span> {applicant.source || "Default"}</div>
                           <div><span className="font-semibold">Dept:</span> {applicant.department || "—"}</div>
                           <div>
                             <span className="font-semibold">Updated:</span> {new Date(applicant.updatedAt).toLocaleDateString("en-US", {
@@ -395,8 +379,8 @@ function ExpandedDetailPane({ applicant }: { applicant: ApplicantData }) {
   const isInterviewing = applicant.interviewStatus === "Interviewing";
 
   // Ratings helper
-  const getRatingValue = (val: number | null | undefined) => {
-    return val !== undefined && val !== null ? `${val}/10` : "—";
+  const getRatingValue = (val: number | null | undefined, max: number = 10) => {
+    return val !== undefined && val !== null ? `${val}/${max}` : "—";
   };
 
   // Profile fields to exclude from custom application questions
@@ -485,20 +469,33 @@ function ExpandedDetailPane({ applicant }: { applicant: ApplicantData }) {
             ) : (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-y-2 text-xs">
-                  <div className="text-[#8A938D] font-semibold">Technical</div>
-                  <div className="text-[#F5F5F5] font-bold text-right">{getRatingValue(applicant.evaluation?.technical)}</div>
-                  
-                  <div className="text-[#8A938D] font-semibold">Communication</div>
-                  <div className="text-[#F5F5F5] font-bold text-right">{getRatingValue(applicant.evaluation?.communication)}</div>
-                  
-                  <div className="text-[#8A938D] font-semibold">Confidence</div>
-                  <div className="text-[#F5F5F5] font-bold text-right">{getRatingValue(applicant.evaluation?.confidence)}</div>
-                  
-                  <div className="text-[#8A938D] font-semibold">Leadership</div>
-                  <div className="text-[#F5F5F5] font-bold text-right">{getRatingValue(applicant.evaluation?.leadership)}</div>
-                  
-                  <div className="text-[#8A938D] font-semibold">Teamwork</div>
-                  <div className="text-[#F5F5F5] font-bold text-right">{getRatingValue(applicant.evaluation?.teamwork)}</div>
+                  {applicant.evaluation?.criteriaSnapshot && applicant.evaluation.criteriaSnapshot.length > 0 ? (
+                    applicant.evaluation.criteriaSnapshot.map((crit) => (
+                      <React.Fragment key={crit.id || crit.label}>
+                        <div className="text-[#8A938D] font-semibold truncate pr-2">{crit.label}</div>
+                        <div className="text-[#F5F5F5] font-bold text-right font-mono">
+                          {getRatingValue(crit.score, crit.maxScore || 10)}
+                        </div>
+                      </React.Fragment>
+                    ))
+                  ) : (
+                    <>
+                      <div className="text-[#8A938D] font-semibold">Technical</div>
+                      <div className="text-[#F5F5F5] font-bold text-right font-mono">{getRatingValue(applicant.evaluation?.technical)}</div>
+                      
+                      <div className="text-[#8A938D] font-semibold">Communication</div>
+                      <div className="text-[#F5F5F5] font-bold text-right font-mono">{getRatingValue(applicant.evaluation?.communication)}</div>
+                      
+                      <div className="text-[#8A938D] font-semibold">Confidence</div>
+                      <div className="text-[#F5F5F5] font-bold text-right font-mono">{getRatingValue(applicant.evaluation?.confidence)}</div>
+                      
+                      <div className="text-[#8A938D] font-semibold">Leadership</div>
+                      <div className="text-[#F5F5F5] font-bold text-right font-mono">{getRatingValue(applicant.evaluation?.leadership)}</div>
+                      
+                      <div className="text-[#8A938D] font-semibold">Teamwork</div>
+                      <div className="text-[#F5F5F5] font-bold text-right font-mono">{getRatingValue(applicant.evaluation?.teamwork)}</div>
+                    </>
+                  )}
                 </div>
               </div>
             )}

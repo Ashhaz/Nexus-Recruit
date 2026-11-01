@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
+import { getActiveEventId } from "@/lib/activeEvent";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await connectToDatabase();
+
+    const { searchParams } = new URL(request.url);
+    let eventId = searchParams.get("eventId");
+    if (!eventId || eventId === "active") {
+      eventId = await getActiveEventId();
+    }
+    const query = eventId && eventId !== "all" ? { eventId } : {};
+
     const applicants = await Applicant.find(
-      {},
+      query,
       {
         name: 1,
         rollNumber: 1,
@@ -24,12 +33,16 @@ export async function GET() {
         teamApplied: 1,
         evaluation: 1,
         responses: 1,
+        source: 1,
+        sourceId: 1,
+        eventId: 1,
         updatedAt: 1
       }
     ).lean();
 
     return NextResponse.json({
       success: true,
+      activeEventId: eventId !== "all" ? eventId : null,
       applicants
     });
   } catch (error: any) {

@@ -58,11 +58,14 @@ export async function POST(request: Request) {
               continue;
             }
 
-            const existing = await Applicant.findOne({ rollNumber: parsed.rollNumber });
+            const existing = await Applicant.findOne({
+              eventId: String(source._id),
+              rollNumber: parsed.rollNumber,
+            });
 
             if (existing) {
               await Applicant.updateOne(
-                { rollNumber: parsed.rollNumber },
+                { eventId: String(source._id), rollNumber: parsed.rollNumber },
                 {
                   $set: {
                     name: parsed.name !== "Unknown" ? parsed.name : existing.name,
@@ -73,6 +76,8 @@ export async function POST(request: Request) {
                     year: parsed.year || existing.year,
                     teamApplied: parsed.teamApplied || existing.teamApplied,
                     source: source.name,
+                    sourceId: String(source._id),
+                    eventId: String(source._id),
                     responses: parsed.sanitizedResponses,
                   },
                 }
@@ -89,6 +94,8 @@ export async function POST(request: Request) {
                 year: parsed.year,
                 teamApplied: parsed.teamApplied,
                 source: source.name,
+                sourceId: String(source._id),
+                eventId: String(source._id),
                 responses: parsed.sanitizedResponses,
                 interviewStatus: "Waiting",
                 assignedRoom: null,
@@ -101,6 +108,8 @@ export async function POST(request: Request) {
             }
           }
 
+          const count = await Applicant.countDocuments({ eventId: String(source._id) });
+          source.applicantCount = count;
           source.status = "Connected";
           source.lastError = null;
           source.lastLoadedAt = new Date();

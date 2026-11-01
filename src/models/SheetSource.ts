@@ -17,7 +17,9 @@ export interface ISheetSource extends Document {
     updated: number;
     skipped: number;
   } | null;
+  applicantCount?: number;
   isDefault?: boolean;
+  isGloballyActive?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,7 +46,9 @@ const SheetSourceSchema: Schema = new Schema(
       updated: { type: Number, default: 0 },
       skipped: { type: Number, default: 0 },
     },
+    applicantCount: { type: Number, default: 0 },
     isDefault: { type: Boolean, default: false },
+    isGloballyActive: { type: Boolean, default: false },
   },
   {
     timestamps: true,

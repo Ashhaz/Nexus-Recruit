@@ -6,12 +6,10 @@ import CustomCursor from "@/components/ui/CustomCursor";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface Ratings {
-  technical: number;
-  communication: number;
-  confidence: number;
-  leadership: number;
-  teamwork: number;
+interface EvaluationCriterion {
+  id: string;
+  name: string;
+  maxScore: number;
 }
 
 interface ApplicantSummary {
@@ -22,20 +20,13 @@ interface ApplicantSummary {
 }
 
 interface DashboardSnapshot {
+  activeEvent?: { _id: string; name: string } | null;
   interviewer: { name: string };
   room: { roomNumber: number };
   applicant: ApplicantSummary;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-const RATING_LABELS: (keyof Ratings)[] = [
-  "technical",
-  "communication",
-  "confidence",
-  "leadership",
-  "teamwork",
-];
 
 const DECISION_OPTIONS: Array<"Approved" | "Pending" | "Discussion Needed"> = [
   "Approved",
@@ -55,48 +46,164 @@ export default function InterviewerEvaluationPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const interviewerName = searchParams.get("name") ?? "";
+  const roomParam = searchParams.get("room") ?? "";
+  const applicantIdParam = searchParams.get("applicantId") ?? "";
 
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [loadingSnapshot, setLoadingSnapshot] = useState(true);
   const [snapshotError, setSnapshotError] = useState("");
 
-  const [ratings, setRatings] = useState<Ratings>({
-    technical: 5,
-    communication: 5,
-    confidence: 5,
-    leadership: 5,
-    teamwork: 5,
-  });
+  const [criteria, setCriteria] = useState<EvaluationCriterion[]>([
+    { id: "technical", name: "Technical", maxScore: 10 },
+    { id: "communication", name: "Communication", maxScore: 10 },
+    { id: "confidence", name: "Confidence", maxScore: 10 },
+    { id: "leadership", name: "Leadership", maxScore: 10 },
+    { id: "teamwork", name: "Teamwork", maxScore: 10 },
+  ]);
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+  const [loadingCriteria, setLoadingCriteria] = useState(true);
+
   const [notes, setNotes] = useState("");
   const [decision, setDecision] = useState<"Approved" | "Pending" | "Discussion Needed" | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  // ── Fetch dynamic global evaluation criteria ──────────────────────────────
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCriteria = async () => {
+      try {
+        const res = await fetch("/api/evaluation-config");
+        const json = await res.json();
+        if (json.success && Array.isArray(json.criteria) && json.criteria.length > 0) {
+          if (isMounted) {
+            setCriteria(json.criteria);
+            setRatings((prev) => {
+              const updated = { ...prev };
+              json.criteria.forEach((c: EvaluationCriterion) => {
+                if (updated[c.id] === undefined) {
+                  updated[c.id] = Math.round(c.maxScore / 2);
+                }
+              });
+              return updated;
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load evaluation criteria:", err);
+      } finally {
+        if (isMounted) setLoadingCriteria(false);
+      }
+    };
+    fetchCriteria();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // ── Load the applicant info for context ────────────────────────────────────
 
   const loadSnapshot = useCallback(async () => {
-    if (!interviewerName) {
-      setSnapshotError("No interviewer name in URL. Add ?name=YourName.");
-      setLoadingSnapshot(false);
-      return;
+    let cachedNotes = "";
+    if (typeof window !== "undefined") {
+      try {
+        cachedNotes =
+          (applicantIdParam ? sessionStorage.getItem(`nexus_interview_notes_${applicantIdParam}`) : null) ||
+          (roomParam ? sessionStorage.getItem(`nexus_interview_notes_${roomParam}`) : null) ||
+          "";
+        if (cachedNotes) {
+          setNotes(cachedNotes);
+        }
+      } catch (_) {}
     }
+
     try {
-      const res = await fetch(
-        `/api/interviewer/dashboard?name=${encodeURIComponent(interviewerName)}`
-      );
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Failed to load applicant");
-      setSnapshot(json as DashboardSnapshot);
-      if (json.applicant && json.applicant.interviewNotes) {
-        setNotes(json.applicant.interviewNotes);
+      // 1. Try fetching via workspace room if room number is available
+      if (roomParam) {
+        const wsRes = await fetch(`/api/interviewer/workspace?room=${roomParam}`);
+        const wsJson = await wsRes.json();
+        if (wsJson.success && wsJson.room && wsJson.applicant) {
+          setSnapshot({
+            activeEvent: wsJson.activeEvent,
+            interviewer: { name: wsJson.room.interviewer || interviewerName },
+            room: { roomNumber: wsJson.room.roomNumber },
+            applicant: {
+              _id: wsJson.applicant._id,
+              name: wsJson.applicant.name,
+              rollNumber: wsJson.applicant.rollNumber,
+              department: wsJson.applicant.department,
+            },
+          });
+          if (wsJson.applicant.interviewNotes) {
+            setNotes(wsJson.applicant.interviewNotes);
+          } else if (cachedNotes) {
+            setNotes(cachedNotes);
+          }
+          setLoadingSnapshot(false);
+          return;
+        }
       }
+
+      // 2. Try fetching via interviewer dashboard
+      if (interviewerName) {
+        const res = await fetch(
+          `/api/interviewer/dashboard?name=${encodeURIComponent(interviewerName)}`
+        );
+        const json = await res.json();
+        if (json.success && json.applicant) {
+          setSnapshot(json as DashboardSnapshot);
+          if (json.applicant.interviewNotes) {
+            setNotes(json.applicant.interviewNotes);
+          } else if (cachedNotes) {
+            setNotes(cachedNotes);
+          }
+          setLoadingSnapshot(false);
+          return;
+        }
+      }
+
+      // 3. Fallback: match by applicantId across applicants
+      if (applicantIdParam) {
+        const appRes = await fetch(`/api/dashboard/applicants?eventId=all`);
+        const appJson = await appRes.json();
+        if (appJson.success && Array.isArray(appJson.applicants)) {
+          const matched = appJson.applicants.find((a: any) => a._id === applicantIdParam);
+          if (matched) {
+            setSnapshot({
+              activeEvent: null,
+              interviewer: { name: matched.assignedInterviewer || interviewerName || "Interviewer" },
+              room: { roomNumber: Number(roomParam) || matched.assignedRoom || 1 },
+              applicant: {
+                _id: matched._id,
+                name: matched.name,
+                rollNumber: matched.rollNumber,
+                department: matched.department,
+              },
+            });
+            if (matched.interviewNotes) {
+              setNotes(matched.interviewNotes);
+            } else if (cachedNotes) {
+              setNotes(cachedNotes);
+            }
+            setLoadingSnapshot(false);
+            return;
+          }
+        }
+      }
+
+      if (!interviewerName && !roomParam && !applicantIdParam) {
+        throw new Error("No room, interviewer name, or applicantId provided in URL.");
+      }
+
+      throw new Error("Could not find candidate information. Please ensure room is active.");
     } catch (e: any) {
       setSnapshotError(e.message);
     } finally {
       setLoadingSnapshot(false);
     }
-  }, [interviewerName]);
+  }, [applicantIdParam, roomParam, interviewerName]);
 
   useEffect(() => {
     loadSnapshot();
@@ -113,6 +220,13 @@ export default function InterviewerEvaluationPage() {
     setSubmitting(true);
     setSubmitError("");
     try {
+      const criteriaSnapshot = criteria.map((c) => ({
+        id: c.id,
+        label: c.name,
+        score: ratings[c.id] !== undefined ? ratings[c.id] : Math.round((c.maxScore || 10) / 2),
+        maxScore: c.maxScore || 10,
+      }));
+
       const res = await fetch("/api/interviewer/evaluate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -120,12 +234,24 @@ export default function InterviewerEvaluationPage() {
           applicantId: snapshot.applicant._id,
           roomNumber:  snapshot.room.roomNumber,
           ratings,
+          criteriaSnapshot,
           notes,
           decision,
         }),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Failed to submit evaluation");
+
+      // Clean up cached notes
+      if (typeof window !== "undefined") {
+        try {
+          if (roomParam) sessionStorage.removeItem(`nexus_interview_notes_${roomParam}`);
+          if (snapshot.room.roomNumber) sessionStorage.removeItem(`nexus_interview_notes_${snapshot.room.roomNumber}`);
+          if (snapshot.applicant._id) sessionStorage.removeItem(`nexus_interview_notes_${snapshot.applicant._id}`);
+          if (applicantIdParam) sessionStorage.removeItem(`nexus_interview_notes_${applicantIdParam}`);
+        } catch (_) {}
+      }
+
       setSubmitted(true);
     } catch (e: any) {
       setSubmitError(e.message);
@@ -205,11 +331,20 @@ export default function InterviewerEvaluationPage() {
               <p className="text-[9px] text-[#8A938D] font-bold uppercase tracking-widest">Evaluation Form</p>
             </div>
           </div>
-          {snapshot && (
-            <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider hidden sm:block">
-              Evaluating: <span className="text-[#F5F5F5] font-black">{snapshot.applicant.name}</span>
-            </p>
-          )}
+          <div className="flex items-center gap-3">
+            {snapshot?.activeEvent && (
+              <div className="bg-[#101412] px-3.5 py-1.5 rounded-full flex items-center gap-2 border border-[#00FF66]/30 shadow-[0_0_12px_rgba(0,255,102,0.1)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00FF66] animate-pulse" />
+                <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-wider hidden sm:inline">Event:</span>
+                <span className="text-xs font-bold text-[#F5F5F5] truncate max-w-[140px] sm:max-w-[180px]">{snapshot.activeEvent.name}</span>
+              </div>
+            )}
+            {snapshot && (
+              <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider hidden sm:block">
+                Evaluating: <span className="text-[#F5F5F5] font-black">{snapshot.applicant.name}</span>
+              </p>
+            )}
+          </div>
         </div>
       </header>
 
@@ -253,52 +388,126 @@ export default function InterviewerEvaluationPage() {
             <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-6 shadow-xl">
               <div className="flex items-center gap-2 mb-6 border-b border-[#1D2A22]/50 pb-3">
                 <h2 className="text-xs font-black text-[#F5F5F5] uppercase tracking-widest">Performance Ratings</h2>
-                <span className="text-[10px] text-[#8A938D] font-bold uppercase tracking-wider ml-auto">Scale: 1 – 10</span>
-              </div>
-              <div className="space-y-6">
-                {RATING_LABELS.map((key) => (
-                  <div key={key}>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs text-[#8A938D] uppercase tracking-widest font-black capitalize">{key}</label>
-                      <span className="text-sm font-mono font-bold text-[#00FF66] w-6 text-center">
-                        {ratings[key]}
-                      </span>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="range"
-                        min={1}
-                        max={10}
-                        step={1}
-                        value={ratings[key]}
-                        onChange={(e) =>
-                          setRatings((prev) => ({ ...prev, [key]: Number(e.target.value) }))
-                        }
-                        className="w-full accent-[#00FF66] cursor-pointer"
-                        style={{ accentColor: "#00FF66" }}
-                      />
-                      <div className="flex justify-between mt-1 px-1">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                          <span key={n} className={`text-[9px] font-mono ${ratings[key] >= n ? "text-[#00FF66] font-bold" : "text-[#8A938D]/30"}`}>
-                            {n}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Average indicator */}
-              <div className="mt-8 pt-4 border-t border-[#1D2A22]/50 flex items-center justify-between">
-                <span className="text-[10px] text-[#8A938D] font-black uppercase tracking-widest">Overall Average</span>
-                <span className="text-xl font-bold font-mono text-[#00FF66]">
-                  {(Object.values(ratings).reduce((a, b) => a + b, 0) / 5).toFixed(1)}
-                  <span className="text-xs text-[#8A938D] font-normal"> / 10</span>
+                <span className="text-[10px] text-[#8A938D] font-bold uppercase tracking-wider ml-auto">
+                  {criteria.length} Criteria Configured
                 </span>
               </div>
+
+              {loadingCriteria ? (
+                <div className="space-y-4 py-4">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <div key={n} className="h-12 bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {criteria.map((crit) => {
+                    const max = crit.maxScore || 10;
+                    const currentVal = ratings[crit.id] !== undefined ? ratings[crit.id] : Math.round(max / 2);
+                    const ticks = Array.from({ length: Math.min(max + 1, 11) }, (_, i) => Math.round((i / Math.min(max, 10)) * max));
+                    const uniqueTicks = Array.from(new Set(ticks));
+
+                    return (
+                      <div key={crit.id}>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-xs text-[#8A938D] uppercase tracking-widest font-black">
+                            {crit.name}
+                          </label>
+                          <span className="text-sm font-mono font-bold text-[#00FF66] text-right">
+                            {currentVal} <span className="text-[10px] text-[#8A938D] font-normal">/ {max}</span>
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <input
+                            type="range"
+                            min={0}
+                            max={max}
+                            step={1}
+                            value={currentVal}
+                            onChange={(e) => {
+                              const val = Math.min(max, Math.max(0, Number(e.target.value)));
+                              setRatings((prev) => ({ ...prev, [crit.id]: val }));
+                            }}
+                            className="w-full accent-[#00FF66] cursor-pointer"
+                            style={{ accentColor: "#00FF66" }}
+                          />
+                          <div className="flex justify-between mt-1 px-1">
+                            {uniqueTicks.map((n) => (
+                              <span
+                                key={n}
+                                className={`text-[9px] font-mono ${
+                                  currentVal >= n ? "text-[#00FF66] font-bold" : "text-[#8A938D]/30"
+                                }`}
+                              >
+                                {n}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Average indicator */}
+              {(() => {
+                const totalMax = criteria.reduce((sum, c) => sum + (c.maxScore || 10), 0);
+                const totalScore = criteria.reduce((sum, c) => sum + (ratings[c.id] ?? Math.round((c.maxScore || 10) / 2)), 0);
+                const normalizedAverage = totalMax > 0 ? ((totalScore / totalMax) * 10).toFixed(1) : "0.0";
+
+                return (
+                  <div className="mt-8 pt-4 border-t border-[#1D2A22]/50 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-[#8A938D] font-black uppercase tracking-widest block">Overall Average</span>
+                      <span className="text-[9px] text-[#8A938D]/60 font-mono">
+                        Total: {totalScore} / {totalMax}
+                      </span>
+                    </div>
+                    <span className="text-xl font-bold font-mono text-[#00FF66]">
+                      {normalizedAverage}
+                      <span className="text-xs text-[#8A938D] font-normal"> / 10</span>
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
+
+            {/* ── Interview Observations & Notes ─────────────────────────── */}
+            <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-6 shadow-xl">
+              <div className="flex items-center justify-between mb-3 border-b border-[#1D2A22]/50 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#00FF66] text-base">rate_review</span>
+                  <h2 className="text-xs font-black text-[#F5F5F5] uppercase tracking-widest">
+                    Interview Observations &amp; Notes
+                  </h2>
+                </div>
+                <span className="text-[10px] text-[#8A938D] font-bold uppercase tracking-wider">
+                  Persistent Record
+                </span>
+              </div>
+              <p className="text-[11px] text-[#8A938D] mb-3">
+                Review or record observations, technical answers, candidate strengths, and recommendations.
+              </p>
+              <textarea
+                value={notes}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setNotes(val);
+                  if (typeof window !== "undefined") {
+                    try {
+                      if (roomParam) sessionStorage.setItem(`nexus_interview_notes_${roomParam}`, val);
+                      if (snapshot?.applicant?._id) sessionStorage.setItem(`nexus_interview_notes_${snapshot.applicant._id}`, val);
+                      if (applicantIdParam) sessionStorage.setItem(`nexus_interview_notes_${applicantIdParam}`, val);
+                    } catch (_) {}
+                  }
+                }}
+                placeholder="Enter interview notes, key observations, candidate strengths..."
+                rows={4}
+                className="w-full bg-[#0B0D0C] border border-[#1D2A22] rounded-lg p-3 text-xs text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] transition-all outline-none resize-y"
+              />
+            </div>
 
             {/* ── Final Decision ───────────────────────────────────────────── */}
             <div className="bg-[#101412] border border-[#1D2A22] rounded-xl p-6 shadow-xl">

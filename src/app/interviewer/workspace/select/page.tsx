@@ -33,6 +33,9 @@ export default function ApplicantSelectPage() {
   const [interviewerId, setInterviewerId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeEvent, setActiveEvent] = useState<{ _id: string; name: string } | null>(null);
+  const [waitingQueue, setWaitingQueue] = useState<ApplicantData[]>([]);
+  const [loadingQueue, setLoadingQueue] = useState(false);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -92,12 +95,33 @@ export default function ApplicantSelectPage() {
     }
   }, [roomNumber, router]);
 
+  const fetchWaitingQueue = useCallback(async () => {
+    setLoadingQueue(true);
+    try {
+      const res = await fetch("/api/applicants/search?status=Waiting");
+      const data = await res.json();
+      if (data.applicants) {
+        setWaitingQueue(data.applicants);
+      }
+      const resActive = await fetch("/api/active-event");
+      const jsonActive = await resActive.json();
+      if (jsonActive.success && jsonActive.event) {
+        setActiveEvent(jsonActive.event);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingQueue(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchRoomData();
+    fetchWaitingQueue();
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
-  }, [fetchRoomData]);
+  }, [fetchRoomData, fetchWaitingQueue]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -212,6 +236,13 @@ export default function ApplicantSelectPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {activeEvent && (
+              <div className="bg-[#101412] px-3.5 py-1.5 rounded-full flex items-center gap-2 border border-[#00FF66]/30 shadow-[0_0_12px_rgba(0,255,102,0.1)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00FF66] animate-pulse" />
+                <span className="text-[9px] font-black text-[#8A938D] uppercase tracking-wider hidden sm:inline">Event:</span>
+                <span className="text-xs font-bold text-[#F5F5F5] truncate max-w-[140px] sm:max-w-[200px]">{activeEvent.name}</span>
+              </div>
+            )}
             <div className="bg-[#101412] px-4 py-1.5 rounded-full flex items-center gap-2 border border-[#1D2A22]">
               <span className="text-[9px] font-bold text-[#8A938D] uppercase tracking-wider">Room</span>
               <span className="text-sm font-black text-[#00FF66]">{roomNumber}</span>
@@ -333,6 +364,59 @@ export default function ApplicantSelectPage() {
                   {/* No results */}
                   {searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && (
                     <p className="text-xs text-[#8A938D] mt-4 text-center font-semibold uppercase tracking-wider">No waiting applicants found for &ldquo;{searchQuery}&rdquo;</p>
+                  )}
+
+                  {/* Available Candidates Queue (Active Event) */}
+                  {searchQuery.length < 2 && (
+                    <div className="mt-6">
+                      <div className="flex items-center justify-between mb-3 px-1">
+                        <span className="text-[10px] font-black text-[#8A938D] uppercase tracking-widest flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[14px] text-[#00FF66]">format_list_bulleted</span>
+                          Available Candidates in Queue ({waitingQueue.length})
+                        </span>
+                        {activeEvent && (
+                          <span className="text-[9px] text-[#00FF66] font-bold uppercase tracking-wider">
+                            {activeEvent.name}
+                          </span>
+                        )}
+                      </div>
+
+                      {loadingQueue ? (
+                        <div className="py-8 flex justify-center">
+                          <div className="w-5 h-5 border-2 border-[#00FF66]/30 border-t-[#00FF66] rounded-full animate-spin" />
+                        </div>
+                      ) : waitingQueue.length === 0 ? (
+                        <div className="py-8 text-center border border-[#1D2A22] rounded-lg bg-[#0B0D0C]/40 text-[#8A938D]">
+                          <p className="text-xs font-bold uppercase tracking-wider">No waiting candidates currently in queue for this event.</p>
+                        </div>
+                      ) : (
+                        <ul className="max-h-72 overflow-y-auto border border-[#1D2A22] rounded-lg bg-[#0B0D0C] divide-y divide-[#1D2A22] shadow-xl custom-scrollbar">
+                          {waitingQueue.map((a) => (
+                            <li key={a._id}>
+                              <button
+                                onClick={() => {
+                                  setSelectedApplicant(a);
+                                  setSearchQuery("");
+                                  setSearchResults([]);
+                                }}
+                                className="w-full text-left px-6 py-3.5 hover:bg-[#00FF66]/5 transition-colors group flex items-center justify-between"
+                              >
+                                <div>
+                                  <p className="text-sm font-bold text-[#F5F5F5] group-hover:text-[#00FF66] transition-colors">{a.name}</p>
+                                  <p className="text-xs text-[#8A938D] mt-0.5 font-mono">{a.rollNumber}</p>
+                                  {(a.department || a.year) && (
+                                    <p className="text-[10px] text-[#8A938D]/60 mt-1 font-bold uppercase tracking-wider">
+                                      {[a.department, a.year].filter(Boolean).join(" · ")}
+                                    </p>
+                                  )}
+                                </div>
+                                <span className="material-symbols-outlined text-[#8A938D] group-hover:text-[#00FF66] transition-colors text-sm font-bold">arrow_forward</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

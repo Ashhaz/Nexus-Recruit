@@ -2,34 +2,36 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
 import InterviewRoom from "@/models/InterviewRoom";
+import { getGlobalEvaluationConfig } from "@/lib/evaluationConfig";
 
 /**
  * POST /api/interviewer/evaluate
  * Body: {
  *   applicantId: string,
  *   roomNumber:  number,
- *   ratings:     { technical, communication, confidence, leadership, teamwork },
+ *   ratings?:    Record<string, number>,
+ *   criteriaSnapshot?: Array<{ id: string, label: string, score: number, maxScore: number }>,
  *   notes:       string,
  *   decision:    "Approved" | "Pending" | "Discussion Needed"
  * }
  *
- * Persists ratings, notes and decision onto the Applicant document.
+ * Persists ratings, immutable criteria snapshot, notes and decision onto the Applicant document.
  * Frees the room (sets status back to Available, clears applicant ref).
  * Updates applicant interviewStatus to match the decision.
  */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { applicantId, roomNumber, ratings, notes, decision } = body as {
+    const { applicantId, roomNumber, ratings, criteriaSnapshot, notes, decision } = body as {
       applicantId: string;
       roomNumber: number;
-      ratings: {
-        technical: number;
-        communication: number;
-        confidence: number;
-        leadership: number;
-        teamwork: number;
-      };
+      ratings?: Record<string, number>;
+      criteriaSnapshot?: Array<{
+        id: string;
+        label: string;
+        score: number;
+        maxScore: number;
+      }>;
       notes: string;
       decision: "Approved" | "Pending" | "Discussion Needed";
     };
@@ -42,6 +44,42 @@ export async function POST(request: Request) {
     }
 
     await connectToDatabase();
+
+    // Load active global evaluation configuration for validation and fallback
+    const globalConfig = await getGlobalEvaluationConfig();
+
+    let finalSnapshot: Array<{
+      id: string;
+      label: string;
+      score: number;
+      maxScore: number;
+    }> = [];
+
+    if (Array.isArray(criteriaSnapshot) && criteriaSnapshot.length > 0) {
+      finalSnapshot = criteriaSnapshot.map((item) => {
+        const maxScore = Math.max(1, Number(item.maxScore) || 10);
+        const score = Math.max(0, Math.min(Number(item.score) || 0, maxScore));
+        return {
+          id: String(item.id || `crit_${Math.random().toString(36).substring(2, 7)}`),
+          label: String(item.label || "").trim() || "Criterion",
+          score,
+          maxScore,
+        };
+      });
+    } else {
+      // Build snapshot from active global criteria + ratings payload
+      finalSnapshot = globalConfig.criteria.map((crit) => {
+        const rawScore = ratings?.[crit.id] ?? ratings?.[crit.name.toLowerCase()] ?? ratings?.[crit.name] ?? 0;
+        const maxScore = crit.maxScore || 10;
+        const score = Math.max(0, Math.min(Number(rawScore) || 0, maxScore));
+        return {
+          id: crit.id,
+          label: crit.name,
+          score,
+          maxScore,
+        };
+      });
+    }
 
     // Map decision → interviewStatus
     const statusMap: Record<string, string> = {
@@ -70,7 +108,7 @@ export async function POST(request: Request) {
     // If the /workspace/end route already saved a duration, keep the
     // larger value so we never lose a previously-persisted measurement.
     const existingApplicant = await Applicant.findById(applicantId).select(
-      "interviewDuration interviewNotes"
+      "interviewDuration interviewNotes evaluation"
     );
     if (
       existingApplicant?.interviewDuration &&
@@ -79,23 +117,34 @@ export async function POST(request: Request) {
       interviewDuration = existingApplicant.interviewDuration;
     }
 
-    // Build the $set payload — only overwrite notes when the caller
-    // actually provided a non-empty string, so we never blank out
-    // notes that were saved by the "End Interview" step.
+    // Build the $set payload
     const updateFields: Record<string, unknown> = {
       interviewStatus,
       finalDecision: decision,
       interviewDuration,
-      // Store ratings as a nested map so the Results drawer can display them
-      "evaluation.technical":     ratings.technical,
-      "evaluation.communication": ratings.communication,
-      "evaluation.confidence":    ratings.confidence,
-      "evaluation.leadership":    ratings.leadership,
-      "evaluation.teamwork":      ratings.teamwork,
+      "evaluation.criteriaSnapshot": finalSnapshot,
+      "evaluation.submittedAt": new Date(),
     };
 
-    if (notes && notes.trim().length > 0) {
-      updateFields.interviewNotes = notes;
+    // Populate legacy five rating fields if corresponding criterion exists or was sent in ratings
+    for (const snap of finalSnapshot) {
+      const lower = snap.label.toLowerCase();
+      if (["technical", "communication", "confidence", "leadership", "teamwork"].includes(lower)) {
+        updateFields[`evaluation.${lower}`] = snap.score;
+      }
+    }
+    if (ratings && typeof ratings === "object") {
+      for (const k of ["technical", "communication", "confidence", "leadership", "teamwork"]) {
+        if (typeof (ratings as any)[k] === "number" && updateFields[`evaluation.${k}`] === undefined) {
+          updateFields[`evaluation.${k}`] = (ratings as any)[k];
+        }
+      }
+    }
+
+    if (typeof notes === "string" && notes.trim().length > 0) {
+      updateFields.interviewNotes = notes.trim();
+    } else if (existingApplicant?.interviewNotes) {
+      updateFields.interviewNotes = existingApplicant.interviewNotes;
     }
 
     // Persist evaluation on the Applicant

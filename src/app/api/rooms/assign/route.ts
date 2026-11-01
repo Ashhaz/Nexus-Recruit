@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
 import Applicant from "@/models/Applicant";
+import { getActiveEventId } from "@/lib/activeEvent";
 
 export async function POST(request: Request) {
   try {
@@ -20,6 +21,25 @@ export async function POST(request: Request) {
     }
 
     await connectToDatabase();
+    const activeEventId = await getActiveEventId();
+
+    const candidate = await Applicant.findById(applicantId);
+    if (!candidate) {
+      return NextResponse.json(
+        { success: false, error: "Applicant not found" },
+        { status: 404 }
+      );
+    }
+
+    if (activeEventId && candidate.eventId !== activeEventId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Cannot assign candidate: Candidate does not belong to the currently active recruitment event."
+        },
+        { status: 403 }
+      );
+    }
 
     // Find and update the room
     const room = await InterviewRoom.findOne({ roomNumber });

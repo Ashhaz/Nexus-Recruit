@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import LogoutButton from "@/components/ui/LogoutButton";
 import CustomCursor from "@/components/ui/CustomCursor";
+import AdminSidebar from "@/components/admin/AdminSidebar";
+import EventWorkspaceBanner from "@/components/admin/EventWorkspaceBanner";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -352,58 +354,14 @@ export default function AdminRoomsPage() {
       <CustomCursor />
 
       {/* SideNavBar */}
-      <aside className="w-64 fixed left-0 top-0 z-40 bg-[#0B0D0C] border-r border-[#1D2A22] shadow-2xl flex flex-col h-full py-6 hidden md:flex">
-        <div className="px-6 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#00FF66] flex items-center justify-center text-[#050505] shadow-[0_0_12px_rgba(0,255,102,0.4)]">
-              <span className="material-symbols-outlined text-[20px] font-bold">terminal</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-black text-[#F5F5F5] tracking-wider">NEXUS</h1>
-              <p className="text-[9px] font-bold tracking-widest text-[#8A938D] uppercase">Recruitment Engine</p>
-            </div>
-          </div>
-        </div>
-        
-        <nav className="flex-1 space-y-1.5 px-4 overflow-y-auto">
-          <Link href="/admin/dashboard" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/dashboard' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">dashboard</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Dashboard</span>
-          </Link>
-          <Link href="/admin/applicants" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/applicants' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">group</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Applicants</span>
-          </Link>
-          <Link href="/admin/rooms" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/rooms' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">terminal</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Rooms</span>
-          </Link>
-          <Link href="/admin/results" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/results' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">assignment_turned_in</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Results</span>
-          </Link>
-          <Link href="/admin/analytics" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/analytics' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">analytics</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Analytics</span>
-          </Link>
-          <Link href="/admin/settings" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/settings' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">settings</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Settings</span>
-          </Link>
-        </nav>
-        
-        <div className="px-4 mt-auto">
-          <div className="space-y-1">
-            <LogoutButton />
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content Area */}
       <main className="md:ml-64 flex-1 min-h-screen flex flex-col relative">
 
         {/* Page Content */}
         <div className="flex-1 p-8 max-w-[1440px] mx-auto w-full space-y-8 overflow-x-hidden pt-8">
+          <EventWorkspaceBanner />
 
           <div>
             <h2 className="text-2xl font-black tracking-wide text-[#F5F5F5] uppercase">

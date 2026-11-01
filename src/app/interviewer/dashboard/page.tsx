@@ -18,6 +18,8 @@ interface RoomData {
 export default function InterviewerDashboardPage() {
   const router = useRouter();
   const [rooms, setRooms] = useState<RoomData[]>([]);
+  const [activeEvent, setActiveEvent] = useState<{ _id: string; name: string } | null>(null);
+  const [eventStats, setEventStats] = useState<{ totalCandidates: number; waitingCandidates: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
@@ -40,7 +42,22 @@ export default function InterviewerDashboardPage() {
         setLoading(false);
       }
     };
+
+    const fetchActiveEvent = async () => {
+      try {
+        const res = await fetch("/api/active-event");
+        const json = await res.json();
+        if (json.success && json.event) {
+          setActiveEvent(json.event);
+          if (json.stats) setEventStats(json.stats);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
     fetchRooms();
+    fetchActiveEvent();
   }, []);
 
   const handleSelectRoom = (roomNumber: number) => {
@@ -96,12 +113,27 @@ export default function InterviewerDashboardPage() {
               <p className="text-[9px] text-[#8A938D] font-bold uppercase tracking-widest">Interviewer Portal</p>
             </div>
           </div>
-          <SignOutButton redirectUrl="/login">
-            <button className="text-xs font-bold uppercase tracking-wider text-[#8A938D] hover:text-[#FF4D4D] transition-colors flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">logout</span>
-              Logout
-            </button>
-          </SignOutButton>
+
+          <div className="flex items-center gap-4">
+            {activeEvent && (
+              <div className="bg-[#101412] px-3.5 py-1.5 rounded-full flex items-center gap-2 border border-[#00FF66]/30 shadow-[0_0_12px_rgba(0,255,102,0.1)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00FF66] animate-pulse" />
+                <span className="text-[10px] font-black text-[#8A938D] uppercase tracking-wider hidden sm:inline">Active Event:</span>
+                <span className="text-xs font-bold text-[#F5F5F5] truncate max-w-[150px] sm:max-w-[200px]">{activeEvent.name}</span>
+                {eventStats && (
+                  <span className="text-[10px] font-mono font-bold text-[#00FF66] bg-[#00FF66]/10 px-2 py-0.5 rounded-full border border-[#00FF66]/20">
+                    {eventStats.waitingCandidates} in queue
+                  </span>
+                )}
+              </div>
+            )}
+            <SignOutButton redirectUrl="/login">
+              <button className="text-xs font-bold uppercase tracking-wider text-[#8A938D] hover:text-[#FF4D4D] transition-colors flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">logout</span>
+                Logout
+              </button>
+            </SignOutButton>
+          </div>
         </div>
       </header>
 

@@ -72,13 +72,16 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // Check if applicant already exists in database
-      const existing = await Applicant.findOne({ rollNumber: parsed.rollNumber });
+      // Check if applicant already exists in database for THIS specific event
+      const existing = await Applicant.findOne({
+        eventId: String(source._id),
+        rollNumber: parsed.rollNumber,
+      });
 
       if (existing) {
         // Safe update: update registration information but PRESERVE interview progress
         await Applicant.updateOne(
-          { rollNumber: parsed.rollNumber },
+          { eventId: String(source._id), rollNumber: parsed.rollNumber },
           {
             $set: {
               name: parsed.name !== "Unknown" ? parsed.name : existing.name,
@@ -89,6 +92,8 @@ export async function POST(request: Request) {
               year: parsed.year || existing.year,
               teamApplied: parsed.teamApplied || existing.teamApplied,
               source: source.name,
+              sourceId: String(source._id),
+              eventId: String(source._id),
               responses: parsed.sanitizedResponses,
               // Strictly PRESERVE:
               // interviewStatus, assignedRoom, assignedInterviewer,
@@ -109,6 +114,8 @@ export async function POST(request: Request) {
           year: parsed.year,
           teamApplied: parsed.teamApplied,
           source: source.name,
+          sourceId: String(source._id),
+          eventId: String(source._id),
           responses: parsed.sanitizedResponses,
           interviewStatus: "Waiting",
           assignedRoom: null,
@@ -127,6 +134,10 @@ export async function POST(request: Request) {
         imported++;
       }
     }
+
+    // Update applicant count for this event
+    const applicantCount = await Applicant.countDocuments({ eventId: String(source._id) });
+    source.applicantCount = applicantCount;
 
     // Persist sync metadata on the source document
     source.status = "Connected";
@@ -147,6 +158,7 @@ export async function POST(request: Request) {
       imported,
       updated,
       skipped,
+      applicantCount,
       skippedReasons: skippedDetails,
       message: `Data load complete for "${source.name}": ${imported} inserted, ${updated} updated, ${skipped} skipped.`,
     });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
 import Applicant from "@/models/Applicant";
+import { getActiveEventId } from "@/lib/activeEvent";
 
 export async function POST(request: Request) {
   try {
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
     }
 
     await connectToDatabase();
+    const activeEventId = await getActiveEventId();
 
     const room = await InterviewRoom.findOne({ roomNumber: Number(roomNumber) });
     if (!room) {
@@ -47,16 +49,40 @@ export async function POST(request: Request) {
       );
     }
 
+    // Server-side active event enforcement
+    const candidate = await Applicant.findById(applicantId);
+    if (!candidate) {
+      return NextResponse.json(
+        { success: false, error: "CANDIDATE NOT FOUND" },
+        { status: 404 }
+      );
+    }
+
+    if (activeEventId && candidate.eventId !== activeEventId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "UNAUTHORIZED: This candidate does not belong to the currently active recruitment event."
+        },
+        { status: 403 }
+      );
+    }
+
     // Atomically assign the candidate only if they are Waiting and assignedRoom is null
+    const updateCondition: any = {
+      _id: applicantId,
+      interviewStatus: "Waiting",
+      $or: [
+        { assignedRoom: null },
+        { assignedRoom: { $exists: false } }
+      ]
+    };
+    if (activeEventId) {
+      updateCondition.eventId = activeEventId;
+    }
+
     const updateResult = await Applicant.updateOne(
-      {
-        _id: applicantId,
-        interviewStatus: "Waiting",
-        $or: [
-          { assignedRoom: null },
-          { assignedRoom: { $exists: false } }
-        ]
-      },
+      updateCondition,
       {
         $set: {
           interviewStatus: "Interviewing",

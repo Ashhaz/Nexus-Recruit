@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/ui/LogoutButton";
 import CustomCursor from "@/components/ui/CustomCursor";
+import AdminSidebar from "@/components/admin/AdminSidebar";
+import EventWorkspaceBanner from "@/components/admin/EventWorkspaceBanner";
+import { useEvent } from "@/context/EventContext";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,6 +21,8 @@ interface ApplicantResult {
   branch?: string;
   year?: string;
   teamApplied?: string;
+  source?: string;
+  eventId?: string;
   responses: Record<string, string>;
   interviewStatus: string;
   assignedRoom?: number | null;
@@ -33,6 +38,13 @@ interface ApplicantResult {
     confidence?: number;
     leadership?: number;
     teamwork?: number;
+    criteriaSnapshot?: Array<{
+      id: string;
+      label: string;
+      score: number;
+      maxScore: number;
+    }>;
+    submittedAt?: string;
   };
   interview?: {
     ratings?: {
@@ -53,7 +65,7 @@ interface ApplicantResult {
 
 export default function AdminResultsPage() {
   const pathname = usePathname();
-
+  const { eventId } = useEvent();
   const [data, setData] = useState<ApplicantResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -68,25 +80,29 @@ export default function AdminResultsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // ── Data Fetching ───────────────────────────────────────────────────────────
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/results");
-        const json = await res.json();
-        if (json.success && json.data) {
-          setData(json.data);
-        } else {
-          setError(json.error || "Failed to fetch results");
-        }
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch results");
-      } finally {
-        setLoading(false);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const url = eventId
+        ? `/api/results?eventId=${encodeURIComponent(eventId)}`
+        : "/api/results";
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setData(json.data);
+      } else {
+        setError(json.error || "Failed to fetch results");
       }
-    };
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch results");
+    } finally {
+      setLoading(false);
+    }
+  }, [eventId]);
+
+  useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // ── Derived State (Options for filters) ─────────────────────────────────────
   const uniqueStatuses = useMemo(() => {
@@ -237,7 +253,9 @@ export default function AdminResultsPage() {
             <h4 className="text-[10px] font-black tracking-widest text-[#00FF66] uppercase mb-3">Ratings</h4>
             <div className="bg-[#050505]/40 border border-[#14321c] rounded-lg p-4 space-y-3">
               {(() => {
-                const isHistorical = a.evaluation &&
+                const hasSnapshot = Array.isArray(a.evaluation?.criteriaSnapshot) && a.evaluation.criteriaSnapshot.length > 0;
+                
+                const isHistorical = !hasSnapshot && a.evaluation &&
                   a.evaluation.technical === 7 &&
                   a.evaluation.communication === 8 &&
                   a.evaluation.confidence === 8 &&
@@ -245,30 +263,38 @@ export default function AdminResultsPage() {
                   a.evaluation.teamwork === 9 &&
                   new Date(a.updatedAt).getTime() < new Date("2026-08-22T15:00:00Z").getTime();
 
+                const criteriaList = hasSnapshot
+                  ? a.evaluation!.criteriaSnapshot!.map((cs) => ({
+                      label: cs.label,
+                      val: cs.score,
+                      maxScore: cs.maxScore || 10,
+                    }))
+                  : [
+                      { label: "Technical", val: isHistorical ? undefined : a.evaluation?.technical, maxScore: 10 },
+                      { label: "Communication", val: isHistorical ? undefined : a.evaluation?.communication, maxScore: 10 },
+                      { label: "Confidence", val: isHistorical ? undefined : a.evaluation?.confidence, maxScore: 10 },
+                      { label: "Leadership", val: isHistorical ? undefined : a.evaluation?.leadership, maxScore: 10 },
+                      { label: "Teamwork", val: isHistorical ? undefined : a.evaluation?.teamwork, maxScore: 10 }
+                    ];
+
                 return (
                   <>
-                    {[
-                      { label: "Technical", val: isHistorical ? undefined : a.evaluation?.technical },
-                      { label: "Communication", val: isHistorical ? undefined : a.evaluation?.communication },
-                      { label: "Confidence", val: isHistorical ? undefined : a.evaluation?.confidence },
-                      { label: "Leadership", val: isHistorical ? undefined : a.evaluation?.leadership },
-                      { label: "Teamwork", val: isHistorical ? undefined : a.evaluation?.teamwork }
-                    ].map(({ label, val }) => (
+                    {criteriaList.map(({ label, val, maxScore }) => (
                       <div key={label} className="flex items-center justify-between">
-                        <span className="text-xs text-[#F5F5F5] capitalize">{label}</span>
+                        <span className="text-xs text-[#F5F5F5] capitalize truncate max-w-[150px]">{label}</span>
                         <div className="flex items-center gap-3">
                           <div className="w-24 h-1.5 bg-[#0B0D0C] border border-[#1D2A22] rounded-full overflow-hidden">
                             <div 
                               className="height-full bg-[#00FF66] rounded-full" 
                               style={{ 
                                 height: "100%", 
-                                width: val ? `${(val / 5) * 100}%` : "0%",
+                                width: val !== undefined && val !== null ? `${Math.min(100, Math.max(0, (val / maxScore) * 100))}%` : "0%",
                                 boxShadow: "0 0 6px rgba(0, 255, 102, 0.4)" 
                               }} 
                             />
                           </div>
-                          <span className="text-xs font-mono font-bold text-[#00FF66] min-w-[12px] text-right">
-                            {val !== undefined ? val : "—"}
+                          <span className="text-xs font-mono font-bold text-[#00FF66] min-w-[36px] text-right">
+                            {val !== undefined && val !== null ? `${val}/${maxScore}` : "—"}
                           </span>
                         </div>
                       </div>
@@ -304,59 +330,14 @@ export default function AdminResultsPage() {
       <CustomCursor />
 
       {/* SideNavBar */}
-      <aside className="w-64 fixed left-0 top-0 z-40 bg-[#0B0D0C] border-r border-[#1D2A22] shadow-2xl flex flex-col h-full py-6 hidden md:flex">
-        <div className="px-6 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#00FF66] flex items-center justify-center text-[#050505] shadow-[0_0_12px_rgba(0,255,102,0.4)]">
-              <span className="material-symbols-outlined text-[20px] font-bold">terminal</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-black text-[#F5F5F5] tracking-wider">NEXUS</h1>
-              <p className="text-[9px] font-bold tracking-widest text-[#8A938D] uppercase">Recruitment Engine</p>
-            </div>
-          </div>
-        </div>
-        
-        <nav className="flex-1 space-y-1.5 px-4 overflow-y-auto">
-          <Link href="/admin/dashboard" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/dashboard' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">dashboard</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Dashboard</span>
-          </Link>
-          <Link href="/admin/applicants" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/applicants' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">group</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Applicants</span>
-          </Link>
-          <Link href="/admin/rooms" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/rooms' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">terminal</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Rooms</span>
-          </Link>
-          <Link href="/admin/results" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/results' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">assignment_turned_in</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Results</span>
-          </Link>
-          <Link href="/admin/analytics" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/analytics' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">analytics</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Analytics</span>
-          </Link>
-          <Link href="/admin/settings" className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${pathname === '/admin/settings' ? 'bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]' : 'text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-lg">settings</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Settings</span>
-          </Link>
-        </nav>
-
-        <div className="px-4 mt-auto">
-          <div className="space-y-1">
-            <LogoutButton />
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content Area */}
       <main className="md:ml-64 flex-1 min-h-screen flex flex-col relative">
 
-
         {/* Page Content */}
         <div className="flex-1 p-8 max-w-7xl mx-auto w-full flex flex-col gap-6 overflow-x-hidden pt-8">
+          <EventWorkspaceBanner />
 
           {/* Header & Actions */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -438,6 +419,7 @@ export default function AdminResultsPage() {
                 <thead>
                   <tr className="bg-[#0B0D0C] border-b border-[#1D2A22]">
                     <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Applicant</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Event</th>
                     <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Department</th>
                     <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Room &amp; Interviewer</th>
                     <th className="px-6 py-4 text-[9px] font-black text-[#8A938D] uppercase tracking-widest">Status</th>
@@ -451,6 +433,7 @@ export default function AdminResultsPage() {
                     Array.from({ length: 5 }).map((_, i) => (
                       <tr key={i} className="animate-pulse">
                         <td className="px-6 py-4"><div className="h-4 bg-[#0B0D0C] rounded w-3/4 mb-1"></div><div className="h-3 bg-[#0B0D0C] rounded w-1/2"></div></td>
+                        <td className="px-6 py-4"><div className="h-4 bg-[#0B0D0C] rounded w-20"></div></td>
                         <td className="px-6 py-4"><div className="h-4 bg-[#0B0D0C] rounded w-full"></div></td>
                         <td className="px-6 py-4"><div className="h-4 bg-[#0B0D0C] rounded w-2/3 mb-1"></div><div className="h-3 bg-[#0B0D0C] rounded w-1/2"></div></td>
                         <td className="px-6 py-4"><div className="h-6 bg-[#0B0D0C] rounded-full w-24"></div></td>
@@ -461,7 +444,7 @@ export default function AdminResultsPage() {
                   ) : filteredData.length === 0 ? (
                     // Empty State
                     <tr>
-                      <td colSpan={6} className="px-6 py-16 text-center text-[#8A938D]">
+                      <td colSpan={7} className="px-6 py-16 text-center text-[#8A938D]">
                         <span className="material-symbols-outlined text-4xl mb-2 text-[#8A938D]/40">search_off</span>
                         <p className="text-xs font-bold uppercase tracking-wider">No applicants found matching the criteria</p>
                       </td>
@@ -490,6 +473,11 @@ export default function AdminResultsPage() {
                               </div>
                             </td>
                             <td className="px-6 py-4">
+                              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/20">
+                                {a.source || "Default"}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
                               <p className="text-sm text-[#F5F5F5]">{a.department || "—"}</p>
                               {a.teamApplied && <p className="text-xs text-[#8A938D] mt-0.5">{a.teamApplied}</p>}
                             </td>
@@ -511,7 +499,7 @@ export default function AdminResultsPage() {
                           </tr>
                           {isExpanded && (
                             <tr>
-                              <td colSpan={6} className="px-6 py-5 bg-[#0B150F]/70 border-y border-[#14321c]">
+                              <td colSpan={7} className="px-6 py-5 bg-[#0B150F]/70 border-y border-[#14321c]">
                                 <div className="rounded-lg border border-[#14321c] p-6 bg-[#080F0A]/90 text-left">
                                   {renderExpandedContent(a)}
                                 </div>

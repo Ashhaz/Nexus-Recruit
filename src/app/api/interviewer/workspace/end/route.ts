@@ -21,8 +21,8 @@ export async function POST(request: Request) {
     await connectToDatabase();
 
     const updateFields: any = { interviewDuration: duration };
-    if (typeof notes === "string") {
-      updateFields.interviewNotes = notes;
+    if (typeof notes === "string" && notes.trim().length > 0) {
+      updateFields.interviewNotes = notes.trim();
     }
 
     await Applicant.updateOne(

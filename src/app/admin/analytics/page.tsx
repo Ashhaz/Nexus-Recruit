@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/ui/LogoutButton";
 import CustomCursor from "@/components/ui/CustomCursor";
+import AdminSidebar from "@/components/admin/AdminSidebar";
+import EventWorkspaceBanner from "@/components/admin/EventWorkspaceBanner";
+import { useEvent } from "@/context/EventContext";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -55,31 +58,35 @@ function statusColor(s: string) {
 
 export default function AdminAnalyticsPage() {
   const pathname = usePathname();
-
+  const { eventId, currentEvent, isEventWorkspace } = useEvent();
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/analytics");
-        const json = await res.json();
-        if (json.success && json.data) {
-          setAnalyticsData(json.data);
-        } else {
-          setError(json.error || "Failed to load analytics");
-        }
-      } catch (e: any) {
-        setError(e.message || "Failed to load analytics");
-      } finally {
-        setLoading(false);
+  const load = useCallback(async (evId = eventId) => {
+    setLoading(true);
+    try {
+      const url = evId
+        ? `/api/analytics?eventId=${encodeURIComponent(evId)}`
+        : "/api/analytics";
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setAnalyticsData(json.data);
+      } else {
+        setError(json.error || "Failed to load analytics");
       }
-    };
-    load();
-  }, []);
+    } catch (e: any) {
+      setError(e.message || "Failed to load analytics");
+    } finally {
+      setLoading(false);
+    }
+  }, [eventId]);
+
+  useEffect(() => {
+    load(eventId);
+  }, [load, eventId]);
 
   // ── CSV Export ─────────────────────────────────────────────────────────────
   const handleExportCSV = () => {
@@ -166,69 +173,33 @@ export default function AdminAnalyticsPage() {
       <CustomCursor />
 
       {/* SideNavBar ────────────────────────────────────────────────────────── */}
-      <aside className="w-64 fixed left-0 top-0 z-40 bg-[#0B0D0C] border-r border-[#1D2A22] shadow-2xl flex flex-col h-full py-6 hidden md:flex">
-        <div className="px-6 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#00FF66] flex items-center justify-center text-[#050505] shadow-[0_0_12px_rgba(0,255,102,0.4)]">
-              <span className="material-symbols-outlined text-[20px] font-bold">terminal</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-black text-[#F5F5F5] tracking-wider">NEXUS</h1>
-              <p className="text-[9px] font-bold tracking-widest text-[#8A938D] uppercase">Recruitment Engine</p>
-            </div>
-          </div>
-        </div>
-        
-        <nav className="flex-1 space-y-1.5 px-4 overflow-y-auto">
-          {[
-            { href: "/admin/dashboard",  icon: "dashboard",           label: "Dashboard" },
-            { href: "/admin/applicants", icon: "group",               label: "Applicants" },
-            { href: "/admin/rooms",      icon: "terminal",            label: "Rooms" },
-            { href: "/admin/results",    icon: "assignment_turned_in",label: "Results" },
-            { href: "/admin/analytics",  icon: "analytics",           label: "Analytics" },
-            { href: "/admin/settings",   icon: "settings",            label: "Settings" },
-          ].map(({ href, icon, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${
-                pathname === href
-                  ? "bg-[#00FF66]/10 text-[#00FF66] border-r-2 border-[#00FF66] shadow-[inset_0_0_12px_rgba(0,255,102,0.05)]"
-                  : "text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#101412] hover:translate-x-1"
-              }`}
-            >
-              <span className="material-symbols-outlined text-lg">{icon}</span>
-              <span className="text-xs font-bold uppercase tracking-wider">{label}</span>
-            </Link>
-          ))}
-        </nav>
-        <div className="px-4 mt-auto">
-          <LogoutButton />
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main ────────────────────────────────────────────────────────────────── */}
       <main className="md:ml-64 flex-1 flex flex-col min-h-screen relative">
 
         {/* Canvas */}
         <div className="flex-1 p-8 space-y-8 overflow-x-hidden max-w-[1440px] mx-auto w-full">
+          <EventWorkspaceBanner />
 
           {/* Page header */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <h2 className="text-2xl font-black tracking-wide text-[#F5F5F5] uppercase">Analytics Console</h2>
               <p className="text-xs text-[#8A938D] mt-1 font-semibold uppercase tracking-wider">
-                Real-time recruitment insights powered by MongoDB.
+                {isEventWorkspace && currentEvent ? `Recruitment insights for ${currentEvent.name}.` : "Real-time aggregated recruitment insights across all events."}
               </p>
             </div>
-            <button
-              onClick={handleExportCSV}
-              disabled={!analyticsData}
-              className="px-5 py-2.5 bg-[#0B0D0C] hover:bg-[#00FF66] hover:text-[#050505] text-[#F5F5F5] border border-[#1D2A22] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
-            >
-              <span className="material-symbols-outlined text-[18px]">download</span>
-              Export Analytics CSV
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={handleExportCSV}
+                disabled={!analyticsData}
+                className="px-5 py-2.5 bg-[#0B0D0C] hover:bg-[#00FF66] hover:text-[#050505] text-[#F5F5F5] border border-[#1D2A22] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+              >
+                <span className="material-symbols-outlined text-[18px]">download</span>
+                Export Analytics CSV
+              </button>
+            </div>
           </div>
 
           {/* Error */}

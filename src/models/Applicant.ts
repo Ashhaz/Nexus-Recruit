@@ -1,5 +1,12 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
+export interface IEvaluationCriterionSnapshot {
+  id: string;
+  label: string;
+  score: number;
+  maxScore: number;
+}
+
 export interface IApplicant extends Document {
   name: string;
   rollNumber: string;
@@ -10,6 +17,8 @@ export interface IApplicant extends Document {
   year?: string;
   teamApplied?: string;
   source?: string;
+  eventId?: string;
+  sourceId?: string;
   responses: Record<string, string>;
   
   interviewStatus: "Waiting" | "Interviewing" | "Approved" | "Pending" | "Discussion Needed";
@@ -24,6 +33,8 @@ export interface IApplicant extends Document {
     confidence?: number | null;
     leadership?: number | null;
     teamwork?: number | null;
+    criteriaSnapshot?: IEvaluationCriterionSnapshot[];
+    submittedAt?: Date;
   };
   
   createdAt: Date;
@@ -33,7 +44,7 @@ export interface IApplicant extends Document {
 const ApplicantSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
-    rollNumber: { type: String, required: true, unique: true },
+    rollNumber: { type: String, required: true },
     email: { type: String },
     phone: { type: String },
     department: { type: String },
@@ -41,6 +52,8 @@ const ApplicantSchema: Schema = new Schema(
     year: { type: String },
     teamApplied: { type: String },
     source: { type: String, default: "" },
+    eventId: { type: String, default: "", index: true },
+    sourceId: { type: String, default: "" },
     responses: { type: Map, of: String, default: {} },
     
     interviewStatus: {
@@ -59,12 +72,23 @@ const ApplicantSchema: Schema = new Schema(
       confidence: { type: Number, default: null },
       leadership: { type: Number, default: null },
       teamwork: { type: Number, default: null },
+      criteriaSnapshot: [
+        {
+          id: { type: String, required: true },
+          label: { type: String, required: true },
+          score: { type: Number, required: true },
+          maxScore: { type: Number, required: true, default: 10 },
+        },
+      ],
+      submittedAt: { type: Date },
     },
   },
   {
     timestamps: true,
   }
 );
+
+ApplicantSchema.index({ eventId: 1, rollNumber: 1 }, { unique: true });
 
 if (mongoose.models && mongoose.models.Applicant) {
   delete mongoose.models.Applicant;

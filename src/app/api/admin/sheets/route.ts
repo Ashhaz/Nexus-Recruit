@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import SheetSource from "@/models/SheetSource";
+import Applicant from "@/models/Applicant";
 import { extractSpreadsheetId, getServiceAccountEmail } from "@/lib/googleSheets";
+import { getActiveEventId } from "@/lib/activeEvent";
 
 // Seed default sheet from environment variable if missing
 async function ensureDefaultSource() {
@@ -40,12 +42,30 @@ export async function GET() {
     await connectToDatabase();
     await ensureDefaultSource();
 
+    const activeEventId = await getActiveEventId();
     const sources = await SheetSource.find({}).sort({ isDefault: -1, createdAt: 1 }).lean();
+    
+    // Dynamically aggregate live applicant counts per event/source
+    const applicantCounts = await Applicant.aggregate([
+      { $group: { _id: "$eventId", count: { $sum: 1 } } },
+    ]);
+    const countMap: Record<string, number> = {};
+    for (const item of applicantCounts) {
+      if (item._id) countMap[String(item._id)] = item.count;
+    }
+
+    const sourcesWithCounts = sources.map((s: any) => ({
+      ...s,
+      isGloballyActive: String(s._id) === activeEventId,
+      applicantCount: countMap[String(s._id)] ?? s.applicantCount ?? 0,
+    }));
+
     const serviceAccountEmail = getServiceAccountEmail();
 
     return NextResponse.json({
       success: true,
-      sources,
+      activeEventId,
+      sources: sourcesWithCounts,
       serviceAccountEmail,
     });
   } catch (error: any) {
@@ -264,6 +284,17 @@ export async function DELETE(request: Request) {
         {
           success: false,
           error: "The primary default spreadsheet cannot be deleted. You can deactivate it instead.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const activeEventId = await getActiveEventId();
+    if (String(source._id) === activeEventId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Cannot delete the currently active event. Please set another event as active before deleting this one.",
         },
         { status: 400 }
       );

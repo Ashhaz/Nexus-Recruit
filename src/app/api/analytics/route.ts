@@ -1,24 +1,34 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
+import { getActiveEventId } from "@/lib/activeEvent";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await connectToDatabase();
+
+    const { searchParams } = new URL(request.url);
+    let eventId = searchParams.get("eventId");
+    if (!eventId || eventId === "active") {
+      eventId = await getActiveEventId();
+    }
+    const baseQuery = eventId && eventId !== "all" ? { eventId } : {};
+    const matchStage = eventId && eventId !== "all" ? [{ $match: { eventId } }] : [];
 
     // 1 ── Overview counts ───────────────────────────────────────────────────
     const [total, waiting, interviewing, approved, pending, discussionNeeded] =
       await Promise.all([
-        Applicant.countDocuments(),
-        Applicant.countDocuments({ interviewStatus: "Waiting" }),
-        Applicant.countDocuments({ interviewStatus: "Interviewing" }),
-        Applicant.countDocuments({ interviewStatus: "Approved" }),
-        Applicant.countDocuments({ interviewStatus: "Pending" }),
-        Applicant.countDocuments({ interviewStatus: "Discussion Needed" }),
+        Applicant.countDocuments(baseQuery),
+        Applicant.countDocuments({ ...baseQuery, interviewStatus: "Waiting" }),
+        Applicant.countDocuments({ ...baseQuery, interviewStatus: "Interviewing" }),
+        Applicant.countDocuments({ ...baseQuery, interviewStatus: "Approved" }),
+        Applicant.countDocuments({ ...baseQuery, interviewStatus: "Pending" }),
+        Applicant.countDocuments({ ...baseQuery, interviewStatus: "Discussion Needed" }),
       ]);
 
     // 2 ── Department breakdown ───────────────────────────────────────────────
     const departmentAgg = await Applicant.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: { $ifNull: ["$department", "Unknown"] },
@@ -31,6 +41,7 @@ export async function GET() {
 
     // 3 ── Status distribution ────────────────────────────────────────────────
     const statusAgg = await Applicant.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: { $ifNull: ["$interviewStatus", "Waiting"] },
@@ -43,6 +54,7 @@ export async function GET() {
 
     // 4 ── Team breakdown ─────────────────────────────────────────────────────
     const teamAgg = await Applicant.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: { $ifNull: ["$teamApplied", "Unknown"] },
@@ -54,7 +66,7 @@ export async function GET() {
     ]);
 
     // 5 ── Recent activity (latest 10) ────────────────────────────────────────
-    const recent = await Applicant.find()
+    const recent = await Applicant.find(baseQuery)
       .sort({ createdAt: -1 })
       .limit(10)
       .select("name department interviewStatus createdAt rollNumber")
