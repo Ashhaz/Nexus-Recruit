@@ -10,7 +10,8 @@ export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
 
   if (!userId && isProtectedRoute(req)) {
-    const loginUrl = new URL("/login", req.url);
+    const portal = req.nextUrl.pathname.startsWith('/admin') ? 'admin' : 'interviewer';
+    const loginUrl = new URL(`/login?portal=${portal}`, req.url);
     return NextResponse.redirect(loginUrl);
   }
 

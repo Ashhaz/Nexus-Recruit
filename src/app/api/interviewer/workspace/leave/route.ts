@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
+import { getAuthSession } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
+    const session = await getAuthSession();
+    if (session.role !== "interviewer") {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Interviewer access required." },
+        { status: 403 }
+      );
+    }
+
     const { roomNumber, interviewerId, interviewerName } = await request.json();
 
     if (!roomNumber || !interviewerId || !interviewerName) {

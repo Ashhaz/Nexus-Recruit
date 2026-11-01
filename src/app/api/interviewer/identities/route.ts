@@ -6,10 +6,16 @@ import InterviewerProfile from "@/models/InterviewerProfile";
 export async function GET() {
   try {
     const session = await getAuthSession();
-    if (session.role !== "interviewer" && session.role !== "admin") {
+    if (session.role === "unauthorized") {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
+        { success: false, error: "Unauthorized: Please sign in." },
         { status: 401 }
+      );
+    }
+    if (session.role !== "interviewer") {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Interviewer access required." },
+        { status: 403 }
       );
     }
 
@@ -30,7 +36,7 @@ export async function GET() {
       for (const p of profiles) {
         const lower = p.name.toLowerCase();
         if (!identityMap.has(lower)) {
-          identityMap.set(lower, { id: String(p._id), name: p.name });
+          identityMap.set(lower, { id: p.interviewerId || String(p._id), name: p.name });
         }
       }
     } catch (dbErr) {

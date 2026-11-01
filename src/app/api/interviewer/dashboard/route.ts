@@ -3,17 +3,29 @@ import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
 import Applicant from "@/models/Applicant";
 import { getActiveEventSource } from "@/lib/activeEvent";
+import { getAuthSession } from "@/lib/auth";
 
 /**
  * GET /api/interviewer/dashboard?name=Mudabeer
  *
- * Returns the room + full applicant (with responses) assigned to the given
- * interviewer.  The ?name= query param is used as the identifier because the
- * current auth layer is not yet implemented — the admin sets the interviewer
- * name when assigning a room.
+ * Returns the room + full applicant (with responses) assigned to the given interviewer.
  */
 export async function GET(request: Request) {
   try {
+    const session = await getAuthSession();
+    if (session.role === "unauthorized") {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized: Please sign in." },
+        { status: 401 }
+      );
+    }
+    if (session.role !== "interviewer") {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Interviewer access required." },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const name = searchParams.get("name")?.trim();
 

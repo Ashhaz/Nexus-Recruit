@@ -56,15 +56,30 @@ export default function InterviewerDashboardPage() {
       }
     };
 
+    const fetchCurrentUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        const json = await res.json();
+        if (json.success && json.user?.name && json.user.name !== "Interviewer") {
+          setInterviewerName(json.user.name);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
     fetchRooms();
     fetchActiveEvent();
+    fetchCurrentUser();
   }, []);
 
   const handleSelectRoom = (roomNumber: number) => {
     const room = rooms.find((r) => r.roomNumber === roomNumber);
     setSelectedRoom(roomNumber);
     setRegisterError("");
-    setInterviewerName(room?.assignedInterviewer || "");
+    if (!interviewerName) {
+      setInterviewerName(room?.assignedInterviewer || "");
+    }
   };
 
   const handleRegister = async () => {
@@ -250,7 +265,6 @@ export default function InterviewerDashboardPage() {
                     type="button"
                     onClick={() => {
                       setSelectedRoom(null);
-                      setInterviewerName("");
                       setRegisterError("");
                     }}
                     disabled={registering}

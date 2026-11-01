@@ -2,9 +2,19 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
 import mongoose from "mongoose";
+import { getAuthSession } from "@/lib/auth";
 
 export async function GET() {
-  // ── 1. MongoDB health check ───────────────────────────────────────────────
+  try {
+    const session = await getAuthSession();
+    if (session.role === "unauthorized") {
+      return NextResponse.json({ success: false, error: "Unauthorized: Please sign in." }, { status: 401 });
+    }
+    if (session.role !== "admin") {
+      return NextResponse.json({ success: false, error: "Forbidden: Administrator access required." }, { status: 403 });
+    }
+
+    // ── 1. MongoDB health check ───────────────────────────────────────────────
   let mongodbConnected = false;
   let totalApplicants = 0;
   let lastSync: string | null = null;
@@ -37,16 +47,22 @@ export async function GET() {
   const environment =
     process.env.NODE_ENV === "production" ? "Production" : "Development";
 
-  return NextResponse.json({
-    success: true,
-    data: {
-      mongodbConnected,
-      googleSheetsConnected,
-      lastSync,
-      totalApplicants,
-      environment,
-      version: "1.0.0",
-      nodeVersion,
-    },
-  });
+    return NextResponse.json({
+      success: true,
+      data: {
+        mongodbConnected,
+        googleSheetsConnected,
+        lastSync,
+        totalApplicants,
+        environment,
+        version: "1.0.0",
+        nodeVersion,
+      },
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
 }

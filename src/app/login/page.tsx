@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSignIn, useAuth } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import CustomCursor from "@/components/ui/CustomCursor";
 
-export default function LoginPage() {
+function LoginContent() {
   const { signIn, fetchStatus } = useSignIn();
   const { isSignedIn, isLoaded: isAuthLoaded, signOut } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [step, setStep] = useState<"role_selection" | "credentials" | "mfa">("role_selection");
   const [selectedRole, setSelectedRole] = useState<"admin" | "interviewer" | null>(null);
@@ -21,22 +22,78 @@ export default function LoginPage() {
 
   const isLoaded = fetchStatus === "idle" && !!signIn;
 
+  // Initialize role from URL query param if present (?portal=admin or ?portal=interviewer)
   useEffect(() => {
-    if (isAuthLoaded && isSignedIn) {
-      router.push("/");
-    }
-  }, [isAuthLoaded, isSignedIn, router]);
+    const portal = searchParams.get("portal")?.toLowerCase();
+    const mismatch = searchParams.get("mismatch");
 
-  const handleRoleSelect = (role: "admin" | "interviewer") => {
+    if (portal === "admin") {
+      setSelectedRole("admin");
+      setStep("credentials");
+      if (mismatch === "1") {
+        setError("Access Denied: Your account does not have administrator permissions. Please use an authorized admin account.");
+      }
+    } else if (portal === "interviewer") {
+      setSelectedRole("interviewer");
+      setStep("credentials");
+      if (mismatch === "1") {
+        setError("Access Denied: Your account does not have interviewer permissions. Please use an authorized interviewer account.");
+      }
+    }
+  }, [searchParams]);
+
+  // Handle existing active session safely without automatic redirects
+  useEffect(() => {
+    if (isAuthLoaded && isSignedIn && selectedRole) {
+      const verifyActiveSession = async () => {
+        try {
+          const res = await fetch(`/api/auth/me?t=${Date.now()}`);
+          const json = await res.json();
+          if (json.success && json.user) {
+            const currentRole = json.user.role;
+            if (currentRole === selectedRole) {
+              window.location.href = currentRole === "admin" ? "/admin/dashboard" : "/interviewer/dashboard";
+            } else {
+              // Active session is for the other role - clear it so user can log in to the desired portal
+              await signOut({ redirectUrl: `/login?portal=${selectedRole}&mismatch=1` });
+            }
+          }
+        } catch {
+          // ignore error on background session check
+        }
+      };
+      verifyActiveSession();
+    }
+  }, [isAuthLoaded, isSignedIn, selectedRole, signOut]);
+
+  const handleRoleSelect = async (role: "admin" | "interviewer") => {
     setSelectedRole(role);
     setStep("credentials");
     setError("");
+
+    // If already signed in with a mismatched role, clear the session immediately
+    if (isAuthLoaded && isSignedIn) {
+      try {
+        const res = await fetch(`/api/auth/me?t=${Date.now()}`);
+        const json = await res.json();
+        if (json.success && json.user) {
+          if (json.user.role !== role) {
+            await signOut({ redirectUrl: `/login?portal=${role}&mismatch=1` });
+          } else {
+            window.location.href = role === "admin" ? "/admin/dashboard" : "/interviewer/dashboard";
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
   };
 
   const handleBackToRoles = () => {
     setStep("role_selection");
     setSelectedRole(null);
     setError("");
+    setPassword("");
   };
 
   const handleBackToCredentials = () => {
@@ -53,7 +110,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // Step 1 — provide the identifier to initialize the sign-in
+      // Step 1 — initialize sign-in with identifier
       const { error: createError } = await signIn.create({
         identifier: identifier.trim(),
       });
@@ -76,7 +133,7 @@ export default function LoginPage() {
       }
 
       // Handle Device Trust / Client Trust state
-      if (signIn.status === "needs_client_trust") {
+      if (signIn.status === "needs_client_trust" || (signIn.status as string) === "needs_second_factor") {
         const factor = (signIn as any).supportedSecondFactors?.find((f: any) => f.strategy === "email_code");
         if (factor) {
           await (signIn as any).mfa.sendEmailCode();
@@ -88,37 +145,46 @@ export default function LoginPage() {
         return;
       }
 
-      // Step 3 — finalize the session once status is complete
+      // Step 3 — Server-side role validation BEFORE session finalization
       if (signIn.status === "complete") {
-        const { error: finalizeError } = await signIn.finalize();
-        if (finalizeError) {
-          setError(finalizeError.longMessage || finalizeError.message || "Failed to create session.");
+        const validateRes = await fetch("/api/auth/validate-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: signIn.createdSessionId,
+            identifier: identifier.trim(),
+            portal: selectedRole,
+          }),
+        });
+
+        const validateData = await validateRes.json();
+
+        if (!validateData.success) {
+          // Role mismatch! Reset unfinalized client sign-in state
+          try {
+            await signIn.reset();
+          } catch (resetErr) {
+            console.warn("Sign-in reset warning:", resetErr);
+          }
+
+          setError(validateData.error || "Access Denied.");
+          setPassword("");
           setLoading(false);
           return;
         }
 
-        // Validate role expectations on authenticated user
-        const resAuth = await fetch("/api/auth/me");
-        const jsonAuth = await resAuth.json();
-        if (jsonAuth.success && jsonAuth.user) {
-          const userRole = jsonAuth.user.role;
-          if (selectedRole === "admin" && userRole !== "admin") {
-            setError("Wrong account type: This email is registered as an Interviewer.");
-            await signOut();
-          } else if (selectedRole === "interviewer" && userRole !== "interviewer") {
-            setError("Wrong account type: This email is registered as an Admin.");
-            await signOut();
-          } else {
-            router.push("/");
-          }
-        } else {
-          setError("Failed to fetch user role information.");
-          await signOut();
-        }
+        // Role verified! Finalize session now and navigate explicitly
+        await signIn.finalize({
+          navigate: async () => {
+            window.location.href = validateData.destination;
+          },
+        });
+
+        window.location.href = validateData.destination;
+        return;
       } else {
-        setError(
-          `Sign-in requires an additional step (status: ${signIn.status}). Check your Clerk instance configuration.`
-        );
+        setError(`Sign-in requires an additional step (status: ${signIn.status}).`);
+        setLoading(false);
       }
     } catch (err: any) {
       console.error("Login error:", err);
@@ -131,7 +197,6 @@ export default function LoginPage() {
       } else {
         setError("Invalid email or password.");
       }
-    } finally {
       setLoading(false);
     }
   };
@@ -156,37 +221,41 @@ export default function LoginPage() {
       }
 
       if (signIn.status === "complete") {
-        await signIn.finalize({
-          navigate: async ({ session, decorateUrl }) => {
-            try {
-              const resAuth = await fetch("/api/auth/me");
-              const jsonAuth = await resAuth.json();
-              if (jsonAuth.success && jsonAuth.user) {
-                const userRole = jsonAuth.user.role;
-                if (selectedRole === "admin" && userRole !== "admin") {
-                  setError("Wrong account type: This email is registered as an Interviewer.");
-                  await signOut();
-                  setStep("role_selection");
-                  return;
-                } else if (selectedRole === "interviewer" && userRole !== "interviewer") {
-                  setError("Wrong account type: This email is registered as an Admin.");
-                  await signOut();
-                  setStep("role_selection");
-                  return;
-                }
-              }
-            } catch (err) {
-              console.error("MFA post-finalize role check error:", err);
-            }
+        const validateRes = await fetch("/api/auth/validate-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: signIn.createdSessionId,
+            identifier: identifier.trim(),
+            portal: selectedRole,
+          }),
+        });
 
-            const url = decorateUrl("/");
-            if (url.startsWith("http")) {
-              window.location.href = url;
-            } else {
-              router.push(url);
-            }
+        const validateData = await validateRes.json();
+
+        if (!validateData.success) {
+          try {
+            await signIn.reset();
+          } catch (resetErr) {
+            console.warn("Sign-in reset warning:", resetErr);
+          }
+
+          setError(validateData.error || "Access Denied.");
+          setPassword("");
+          setMfaCode("");
+          setStep("credentials");
+          setLoading(false);
+          return;
+        }
+
+        await signIn.finalize({
+          navigate: async () => {
+            window.location.href = validateData.destination;
           },
         });
+
+        window.location.href = validateData.destination;
+        return;
       } else {
         setError(`Verification succeeded but sign-in is not complete (status: ${signIn.status}).`);
         setLoading(false);
@@ -468,5 +537,19 @@ export default function LoginPage() {
         </div>
       </main>
     </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[#00FF66]/30 border-t-[#00FF66] rounded-full animate-spin"></div>
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

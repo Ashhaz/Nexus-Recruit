@@ -7,11 +7,13 @@ import InterviewerProfile from "@/models/InterviewerProfile";
 
 export async function POST(request: Request) {
   try {
-    const { roomNumber, interviewerName } = await request.json();
+    const body = await request.json();
+    const roomNumber = body.roomNumber;
+    let interviewerName = body.interviewerName;
 
-    if (!roomNumber || !interviewerName) {
+    if (!roomNumber) {
       return NextResponse.json(
-        { success: false, error: "Missing required fields: roomNumber or interviewerName." },
+        { success: false, error: "Missing required field: roomNumber." },
         { status: 400 }
       );
     }
@@ -19,16 +21,28 @@ export async function POST(request: Request) {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
+        { success: false, error: "Unauthorized: Please sign in." },
         { status: 401 }
       );
     }
 
     const session = await getAuthSession();
-    if (session.role !== "interviewer" && session.role !== "admin") {
+    if (session.role !== "interviewer") {
       return NextResponse.json(
-        { success: false, error: "Forbidden: unauthorized role" },
+        { success: false, error: "Forbidden: Interviewer access required." },
         { status: 403 }
+      );
+    }
+
+    // Default to authenticated session name if not passed from client
+    if (!interviewerName && session.interviewerName) {
+      interviewerName = session.interviewerName;
+    }
+
+    if (!interviewerName) {
+      return NextResponse.json(
+        { success: false, error: "Missing required field: interviewerName." },
+        { status: 400 }
       );
     }
 
@@ -37,7 +51,7 @@ export async function POST(request: Request) {
     const room = await InterviewRoom.findOne({ roomNumber: Number(roomNumber) });
     if (!room) {
       return NextResponse.json(
-        { success: false, error: "Room not found." },
+        { success: false, error: `Room ${roomNumber} not found.` },
         { status: 404 }
       );
     }
@@ -49,47 +63,25 @@ export async function POST(request: Request) {
       );
     }
 
-    if (room.status !== "Available") {
-      return NextResponse.json(
-        { success: false, error: "Room is not available." },
-        { status: 400 }
-      );
-    }
+    // Resolve physical interviewer configurations server-side
+    const normalizedInput = (session.role === "interviewer" ? session.interviewerName || interviewerName : interviewerName).trim().toLowerCase();
 
-    // Room-specific access authorization:
-    // If the room has an assigned interviewer, ensure the identity matches (unless admin is conducting)
-    const normalizedInput = interviewerName.trim().toLowerCase();
-    if (
-      room.assignedInterviewer &&
-      room.assignedInterviewer.trim().length > 0 &&
-      session.role !== "admin"
-    ) {
-      if (room.assignedInterviewer.trim().toLowerCase() !== normalizedInput) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Interviewer "${interviewerName}" is not authorized for Room ${room.roomNumber}. Assigned interviewer is "${room.assignedInterviewer}".`,
-          },
-          { status: 403 }
-        );
-      }
-    }
-
-    // Validate physical interviewer configurations server-side
     const INTERVIEWER_CONFIG: Record<string, string> = {
       [process.env.INTERVIEWER_1_ID || "INT1"]: process.env.INTERVIEWER_1_NAME || "Ahmed",
-      [process.env.INTERVIEWER_2_ID || "INT2"]: process.env.INTERVIEWER_2_NAME || "Sarah",
+      [process.env.INTERVIEWER_2_ID || "INT2"]: process.env.INTERVIEWER_2_NAME || "Amaan",
       [process.env.INTERVIEWER_3_ID || "INT3"]: process.env.INTERVIEWER_3_NAME || "Mudabeer",
     };
-    
-    let resolvedInterviewerId: string | null = null;
-    let resolvedInterviewerName: string | null = null;
 
-    for (const [id, name] of Object.entries(INTERVIEWER_CONFIG)) {
-      if (name.trim().toLowerCase() === normalizedInput) {
-        resolvedInterviewerId = id;
-        resolvedInterviewerName = name;
-        break;
+    let resolvedInterviewerId: string | null = session.interviewerId || null;
+    let resolvedInterviewerName: string | null = session.interviewerName || null;
+
+    if (!resolvedInterviewerId || !resolvedInterviewerName) {
+      for (const [id, name] of Object.entries(INTERVIEWER_CONFIG)) {
+        if (name.trim().toLowerCase() === normalizedInput) {
+          resolvedInterviewerId = id;
+          resolvedInterviewerName = name;
+          break;
+        }
       }
     }
 
@@ -101,7 +93,7 @@ export async function POST(request: Request) {
           isArchived: { $ne: true },
         }).lean();
         if (profile) {
-          resolvedInterviewerId = String(profile._id);
+          resolvedInterviewerId = profile.interviewerId || String(profile._id);
           resolvedInterviewerName = profile.name;
         }
       } catch (err) {
@@ -119,32 +111,28 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!resolvedInterviewerId || !resolvedInterviewerName) {
+    const finalInterviewerId: string =
+      resolvedInterviewerId || session.clerkUserId || `INT_${room.roomNumber}`;
+    const finalInterviewerName: string =
+      resolvedInterviewerName || interviewerName || "Interviewer";
+
+    // Check if room is already occupied by this exact interviewer (re-entry)
+    if (room.status !== "Available") {
+      if (
+        room.interviewer &&
+        room.interviewer.trim().toLowerCase() === finalInterviewerName.trim().toLowerCase()
+      ) {
+        return NextResponse.json({ success: true, room });
+      }
       return NextResponse.json(
-        { success: false, error: `Interviewer "${interviewerName}" is not authorized.` },
+        { success: false, error: `Room ${room.roomNumber} is currently occupied by "${room.interviewer}".` },
         { status: 400 }
       );
     }
 
-    // Check if this physical interviewer already owns another active room
-    const activeRoomForInterviewer = await InterviewRoom.findOne({
-      interviewerId: resolvedInterviewerId,
-      status: { $ne: "Available" },
-    });
-
-    if (activeRoomForInterviewer) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Physical interviewer ${resolvedInterviewerName} already has an active room: Room ${activeRoomForInterviewer.roomNumber}.`,
-        },
-        { status: 409 }
-      );
-    }
-
     // Save registration details
-    room.interviewerId = resolvedInterviewerId;
-    room.interviewer = resolvedInterviewerName;
+    room.interviewerId = finalInterviewerId;
+    room.interviewer = finalInterviewerName;
     room.status = "Occupied";
     await room.save();
 

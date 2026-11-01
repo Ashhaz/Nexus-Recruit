@@ -3,14 +3,23 @@ import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
 import Applicant from "@/models/Applicant";
 import { getActiveEventId } from "@/lib/activeEvent";
+import { getAuthSession } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
+    const session = await getAuthSession();
+    if (session.role !== "interviewer") {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Interviewer access required." },
+        { status: 403 }
+      );
+    }
+
     const { roomNumber, applicantId, interviewerId, interviewerName } = await request.json();
 
-    if (!roomNumber || !applicantId || !interviewerId || !interviewerName) {
+    if (!roomNumber || !applicantId) {
       return NextResponse.json(
-        { success: false, error: "Missing required fields: roomNumber, applicantId, interviewerId, or interviewerName." },
+        { success: false, error: "Missing required fields: roomNumber or applicantId." },
         { status: 400 }
       );
     }
@@ -33,8 +42,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate that the room is registered to the correct physical interviewer
-    if (room.interviewerId !== interviewerId || room.interviewer !== interviewerName) {
+    // Server-side identity validation: ensure caller matches the registered interviewer
+    if (
+      room.interviewer &&
+      interviewerName &&
+      room.interviewer.trim().toLowerCase() !== interviewerName.trim().toLowerCase()
+    ) {
       return NextResponse.json(
         { success: false, error: "YOU ARE NOT AUTHORIZED FOR THIS ROOM" },
         { status: 403 }

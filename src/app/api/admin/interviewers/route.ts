@@ -57,7 +57,7 @@ export async function GET() {
           (r) => r.assignedInterviewer?.toLowerCase() === lower
         );
         interviewerMap.set(lower, {
-          id: String(prof._id),
+          id: prof.interviewerId || String(prof._id),
           name: prof.name,
           role: "Custom Profile",
           isDefault: false,

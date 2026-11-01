@@ -3,6 +3,7 @@ import connectToDatabase from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
 import InterviewRoom from "@/models/InterviewRoom";
 import { getGlobalEvaluationConfig } from "@/lib/evaluationConfig";
+import { getAuthSession } from "@/lib/auth";
 
 /**
  * POST /api/interviewer/evaluate
@@ -21,6 +22,17 @@ import { getGlobalEvaluationConfig } from "@/lib/evaluationConfig";
  */
 export async function POST(request: Request) {
   try {
+    const session = await getAuthSession();
+    if (session.role === "unauthorized") {
+      return NextResponse.json({ success: false, error: "Unauthorized: Please sign in." }, { status: 401 });
+    }
+    if (session.role !== "interviewer") {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Interviewer access required." },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { applicantId, roomNumber, ratings, criteriaSnapshot, notes, decision } = body as {
       applicantId: string;

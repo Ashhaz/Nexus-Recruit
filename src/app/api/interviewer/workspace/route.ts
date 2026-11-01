@@ -36,14 +36,14 @@ export async function GET(request: Request) {
       );
     }
 
-    if (session.role !== "interviewer" && session.role !== "admin") {
+    if (session.role !== "interviewer") {
       return NextResponse.json(
-        { success: false, error: "Unauthorized: Interviewer or Administrator access required." },
+        { success: false, error: "Forbidden: Interviewer access required." },
         { status: 403 }
       );
     }
 
-    if (room.isActive === false && session.role !== "admin") {
+    if (room.isActive === false) {
       return NextResponse.json(
         { success: false, error: `Room ${roomNumber} is currently deactivated.` },
         { status: 403 }

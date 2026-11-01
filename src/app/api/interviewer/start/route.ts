@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
 import Applicant from "@/models/Applicant";
+import { getAuthSession } from "@/lib/auth";
 
 /**
  * POST /api/interviewer/start
@@ -12,6 +13,14 @@ import Applicant from "@/models/Applicant";
  */
 export async function POST(request: Request) {
   try {
+    const session = await getAuthSession();
+    if (session.role === "unauthorized") {
+      return NextResponse.json({ success: false, error: "Unauthorized: Please sign in." }, { status: 401 });
+    }
+    if (session.role !== "interviewer") {
+      return NextResponse.json({ success: false, error: "Forbidden: Interviewer access required." }, { status: 403 });
+    }
+
     const body = await request.json();
     const { roomNumber } = body as { roomNumber: number };
 

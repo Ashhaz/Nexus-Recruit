@@ -2,9 +2,18 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
 import { getActiveEventId } from "@/lib/activeEvent";
+import { getAuthSession } from "@/lib/auth";
 
 export async function GET(request: Request) {
   try {
+    const session = await getAuthSession();
+    if (session.role === "unauthorized") {
+      return NextResponse.json({ success: false, error: "Unauthorized: Please sign in." }, { status: 401 });
+    }
+    if (session.role !== "admin") {
+      return NextResponse.json({ success: false, error: "Forbidden: Administrator access required." }, { status: 403 });
+    }
+
     await connectToDatabase();
 
     const { searchParams } = new URL(request.url);
