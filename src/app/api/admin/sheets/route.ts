@@ -11,21 +11,26 @@ async function ensureDefaultSource() {
   const envSheetId = process.env.GOOGLE_SHEET_ID;
   if (!envSheetId) return;
 
-  const existingDefault = await SheetSource.findOne({
-    $or: [{ spreadsheetId: envSheetId }, { isDefault: true }],
-  });
+  let primarySource = await SheetSource.findOne({ spreadsheetId: envSheetId });
 
-  if (!existingDefault) {
-    await SheetSource.create({
+  if (!primarySource) {
+    primarySource = await SheetSource.create({
       name: "Primary Registration Sheet",
       spreadsheetId: envSheetId,
       url: `https://docs.google.com/spreadsheets/d/${envSheetId}/edit`,
       sheetName: "",
-      range: "",
+      range: "A:Z",
       isActive: true,
       status: "Never Tested",
       isDefault: true,
     });
+    // Ensure all other sources are marked non-default
+    await SheetSource.updateMany({ _id: { $ne: primarySource._id } }, { $set: { isDefault: false } });
+  } else if (!primarySource.isDefault) {
+    // Ensure primary registration sheet is correctly marked as default
+    await SheetSource.updateMany({ _id: { $ne: primarySource._id } }, { $set: { isDefault: false } });
+    primarySource.isDefault = true;
+    await primarySource.save();
   }
 }
 

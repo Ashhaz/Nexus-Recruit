@@ -918,18 +918,27 @@ export default function AdminSettingsPage() {
     icon,
     title,
     subtitle,
+    badge,
   }: {
     icon: string;
     title: string;
     subtitle?: string;
+    badge?: React.ReactNode;
   }) => (
-    <div className="flex items-start gap-3 mb-6">
-      <div className="w-9 h-9 rounded-lg bg-[#00FF66]/10 flex items-center justify-center flex-shrink-0 border border-[#00FF66]/20">
-        <span className="material-symbols-outlined text-[#00FF66] text-[20px] font-bold">{icon}</span>
-      </div>
-      <div>
-        <h3 className="text-sm font-black uppercase tracking-wider text-[#F5F5F5]">{title}</h3>
-        {subtitle && <p className="text-[10px] text-[#8A938D] font-semibold uppercase tracking-wider mt-0.5">{subtitle}</p>}
+    <div className="flex items-start justify-between gap-3 mb-6 pb-4 border-b border-[#1D2A22]">
+      <div className="flex items-start gap-3.5">
+        <div className="w-10 h-10 rounded-xl bg-[#00FF66]/10 flex items-center justify-center flex-shrink-0 border border-[#00FF66]/25 shadow-[0_0_12px_rgba(0,255,102,0.15)] text-[#00FF66]">
+          <span className="material-symbols-outlined text-[20px] font-bold">{icon}</span>
+        </div>
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h3 className="text-sm font-black uppercase tracking-wider text-[#F5F5F5]">{title}</h3>
+            {badge}
+          </div>
+          {subtitle && (
+            <p className="text-[11px] text-[#8A938D] font-medium tracking-wide mt-0.5">{subtitle}</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -941,7 +950,7 @@ export default function AdminSettingsPage() {
     label: string;
     value: React.ReactNode;
   }) => (
-    <div className="flex items-center justify-between py-3 border-b border-[#1D2A22]/50 last:border-0">
+    <div className="flex items-center justify-between py-3.5 px-4 rounded-xl border border-transparent hover:border-[#1D2A22] hover:bg-[#080B09] transition-all">
       <span className="text-xs text-[#8A938D] font-bold uppercase tracking-wider">{label}</span>
       <span className="text-sm text-[#F5F5F5] font-semibold text-right">{value}</span>
     </div>
@@ -960,158 +969,160 @@ export default function AdminSettingsPage() {
       <main className="md:ml-64 flex-1 flex flex-col min-h-screen relative">
 
         {/* Canvas */}
-        <div className="flex-1 p-8 max-w-4xl mx-auto w-full space-y-6 overflow-x-hidden">
+        <div className="flex-1 p-6 sm:p-8 lg:p-10 max-w-7xl mx-auto w-full space-y-8 overflow-x-hidden">
           <EventWorkspaceBanner />
 
           {/* Page header */}
-          <div className="mb-2">
-            <h2 className="text-3xl font-black text-[#F5F5F5] uppercase tracking-wide drop-shadow-[0_0_8px_rgba(0,255,102,0.3)]">Settings</h2>
-            <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider mt-1.5">
-              System configuration, status and administration.
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#1D2A22]">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00FF66] animate-pulse" />
+                  Control Center
+                </span>
+                <span className="text-[10px] text-[#8A938D] font-mono uppercase tracking-wider">
+                  NEXUS OS
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-[#F5F5F5] uppercase tracking-wide drop-shadow-[0_0_8px_rgba(0,255,102,0.3)]">
+                Settings &amp; Administration
+              </h2>
+              <p className="text-xs text-[#8A938D] font-semibold uppercase tracking-wider mt-1">
+                System configuration, live status, workspace settings and access controls
+              </p>
+            </div>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className="px-3 py-1.5 rounded-xl bg-[#101412] border border-[#1D2A22] text-[10px] font-mono text-[#8A938D] flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#00FF66]" />
+                Engine Operational
+              </span>
+            </div>
           </div>
 
-          {/* ── 1. Admin Profile ─────────────────────────────────────────────── */}
-          <section className="glass-card p-6 rounded-xl">
-            <SectionHeading icon="manage_accounts" title="Admin Profile" subtitle="Current operator information" />
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/20 flex items-center justify-center text-[#00FF66] flex-shrink-0">
-                  <span className="material-symbols-outlined text-[32px]">shield_person</span>
-                </div>
-                <div>
-                  <p className="text-lg font-black text-[#F5F5F5] uppercase tracking-wide">System Admin</p>
-                  <p className="text-xs text-[#8A938D] font-bold mt-0.5 uppercase tracking-wider">Admin Role</p>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/20 uppercase tracking-wider mt-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#00FF66] animate-pulse" />
-                    Active Session
-                  </span>
-                </div>
-              </div>
-              <button
-                className="px-4 py-2.5 bg-[#0B0D0C] hover:bg-[#101412] hover:text-[#00FF66] border border-[#1D2A22] text-[#8A938D] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-2"
-                title="Edit profile — coming soon"
-              >
-                <span className="material-symbols-outlined text-[18px]">edit</span>
-                Edit Profile
-              </button>
-            </div>
-          </section>
-
-          {/* ── 2. System Status ──────────────────────────────────────────────── */}
-          <section className="glass-card p-6 rounded-xl">
-            <SectionHeading
-              icon="health_and_safety"
-              title="System Status"
-              subtitle="Live connection and environment information"
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-              {/* MongoDB */}
-              <div className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg p-4 flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] text-[#8A938D]">database</span>
-                    <p className="text-[10px] font-bold text-[#8A938D] uppercase tracking-wider">MongoDB</p>
+          {/* ── Top Grid: Admin Profile & System Status ───────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            {/* ── 1. Admin Profile ───────────────────────────────────────────── */}
+            <section className="lg:col-span-5 bg-[#101412] p-6 sm:p-7 rounded-2xl border border-[#1D2A22] shadow-xl hover:border-[#1D2A22]/90 transition-all flex flex-col justify-between">
+              <div>
+                <SectionHeading icon="manage_accounts" title="Admin Profile" subtitle="Current operator authentication and role" />
+                <div className="flex items-start gap-4 p-4 rounded-xl bg-[#080B09] border border-[#1D2A22]">
+                  <div className="w-14 h-14 rounded-2xl bg-[#00FF66]/10 border border-[#00FF66]/25 flex items-center justify-center text-[#00FF66] flex-shrink-0 shadow-[0_0_12px_rgba(0,255,102,0.15)]">
+                    <span className="material-symbols-outlined text-[30px]">shield_person</span>
                   </div>
-                  {settingsLoading ? (
-                    <SkeletonLine w="w-20" />
-                  ) : (
-                    <StatusBadge ok={settings?.mongodbConnected ?? false} />
-                  )}
-                </div>
-                <p className="text-sm font-semibold text-[#F5F5F5] mt-1">
-                  {settingsLoading ? "—" : settings?.mongodbConnected ? "Atlas cluster connected" : "Not reachable"}
-                </p>
-              </div>
-
-              {/* Google Sheets */}
-              <div className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg p-4 flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] text-[#8A938D]">table_chart</span>
-                    <p className="text-[10px] font-bold text-[#8A938D] uppercase tracking-wider">Google Sheets</p>
-                  </div>
-                  {settingsLoading ? (
-                    <SkeletonLine w="w-20" />
-                  ) : (
-                    <StatusBadge ok={settings?.googleSheetsConnected ?? false} />
-                  )}
-                </div>
-                <p className="text-sm font-semibold text-[#F5F5F5] mt-1">
-                  {settingsLoading ? "—" : settings?.googleSheetsConnected ? "Credentials configured" : "Missing credentials"}
-                </p>
-              </div>
-
-              {/* Last Sync */}
-              <div className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg p-4 flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px] text-[#8A938D]">sync</span>
-                  <p className="text-[10px] font-bold text-[#8A938D] uppercase tracking-wider">Last Successful Sync</p>
-                </div>
-                {settingsLoading ? (
-                  <SkeletonLine w="w-3/4" />
-                ) : (
-                  <p className="text-sm font-semibold text-[#F5F5F5] font-mono mt-1">
-                    {settings?.lastSync
-                      ? new Date(settings.lastSync).toLocaleString()
-                      : "No sync recorded"}
-                  </p>
-                )}
-              </div>
-
-              {/* Total Applicants */}
-              <div className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg p-4 flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px] text-[#8A938D]">group</span>
-                  <p className="text-[10px] font-bold text-[#8A938D] uppercase tracking-wider">Total Applicants</p>
-                </div>
-                {settingsLoading ? (
-                  <SkeletonLine w="w-16" />
-                ) : (
-                  <p className="text-2xl font-black text-[#00FF66] font-mono mt-1">
-                    {settings?.totalApplicants ?? "—"}
-                  </p>
-                )}
-              </div>
-
-              {/* Environment */}
-              <div className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg p-4 flex flex-col gap-2 sm:col-span-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] text-[#8A938D]">developer_mode</span>
-                    <p className="text-[10px] font-bold text-[#8A938D] uppercase tracking-wider">Environment</p>
-                  </div>
-                  {!settingsLoading && settings && (
-                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
-                      settings.environment === "Production"
-                        ? "bg-[#00FF66]/10 text-[#00FF66] border-[#00FF66]/20"
-                        : "bg-[#FFB020]/10 text-[#FFB020] border-[#FFB020]/20"
-                    }`}>
-                      {settings.environment}
+                  <div className="min-w-0">
+                    <p className="text-base font-black text-[#F5F5F5] uppercase tracking-wide truncate">System Admin</p>
+                    <p className="text-xs text-[#8A938D] font-bold mt-0.5 uppercase tracking-wider">Super Administrator</p>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/20 uppercase tracking-wider mt-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#00FF66] animate-pulse" />
+                      Active Session
                     </span>
+                  </div>
+                </div>
+              </div>
+              <div className="pt-5 mt-5 border-t border-[#1D2A22] flex items-center justify-between">
+                <span className="text-[10px] font-mono text-[#8A938D] uppercase">Access Level: Full Root</span>
+                <button
+                  className="px-3.5 py-2 bg-[#0B0D0C] hover:bg-[#1A201D] hover:text-[#00FF66] border border-[#1D2A22] hover:border-[#00FF66]/30 text-[#8A938D] rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-2"
+                  title="Edit profile — coming soon"
+                >
+                  <span className="material-symbols-outlined text-[16px]">edit</span>
+                  Edit Profile
+                </button>
+              </div>
+            </section>
+
+            {/* ── 2. System Status ────────────────────────────────────────────── */}
+            <section className="lg:col-span-7 bg-[#101412] p-6 sm:p-7 rounded-2xl border border-[#1D2A22] shadow-xl hover:border-[#1D2A22]/90 transition-all">
+              <SectionHeading
+                icon="health_and_safety"
+                title="System Status"
+                subtitle="Live infrastructure telemetry and environment metrics"
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* MongoDB */}
+                <div className="bg-[#080B09] border border-[#1D2A22] rounded-xl p-4 flex flex-col justify-between gap-3 hover:border-[#1D2A22]/90 transition-all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-[#00FF66]">database</span>
+                      <p className="text-[10px] font-black text-[#8A938D] uppercase tracking-wider">MongoDB</p>
+                    </div>
+                    {settingsLoading ? (
+                      <SkeletonLine w="w-20" />
+                    ) : (
+                      <StatusBadge ok={settings?.mongodbConnected ?? false} />
+                    )}
+                  </div>
+                  <p className="text-xs font-bold text-[#F5F5F5] font-mono">
+                    {settingsLoading ? "—" : settings?.mongodbConnected ? "Atlas Cluster Connected" : "Not Reachable"}
+                  </p>
+                </div>
+
+                {/* Google Sheets */}
+                <div className="bg-[#080B09] border border-[#1D2A22] rounded-xl p-4 flex flex-col justify-between gap-3 hover:border-[#1D2A22]/90 transition-all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-[#00FF66]">table_chart</span>
+                      <p className="text-[10px] font-black text-[#8A938D] uppercase tracking-wider">Google Sheets</p>
+                    </div>
+                    {settingsLoading ? (
+                      <SkeletonLine w="w-20" />
+                    ) : (
+                      <StatusBadge ok={settings?.googleSheetsConnected ?? false} />
+                    )}
+                  </div>
+                  <p className="text-xs font-bold text-[#F5F5F5] font-mono">
+                    {settingsLoading ? "—" : settings?.googleSheetsConnected ? "API Service Configured" : "Missing Credentials"}
+                  </p>
+                </div>
+
+                {/* Last Sync */}
+                <div className="bg-[#080B09] border border-[#1D2A22] rounded-xl p-4 flex flex-col justify-between gap-3 hover:border-[#1D2A22]/90 transition-all">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-[#8A938D]">sync</span>
+                    <p className="text-[10px] font-black text-[#8A938D] uppercase tracking-wider">Last Sync Event</p>
+                  </div>
+                  {settingsLoading ? (
+                    <SkeletonLine w="w-3/4" />
+                  ) : (
+                    <p className="text-xs font-bold text-[#F5F5F5] font-mono truncate">
+                      {settings?.lastSync
+                        ? new Date(settings.lastSync).toLocaleString()
+                        : "No sync recorded"}
+                    </p>
                   )}
                 </div>
-                {settingsLoading ? (
-                  <SkeletonLine w="w-1/3" />
-                ) : (
-                  <p className="text-sm font-semibold text-[#F5F5F5] mt-1">{settings?.environment ?? "—"}</p>
-                )}
-              </div>
 
-            </div>
-          </section>
+                {/* Total Applicants */}
+                <div className="bg-[#080B09] border border-[#1D2A22] rounded-xl p-4 flex flex-col justify-between gap-3 hover:border-[#1D2A22]/90 transition-all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-[#8A938D]">group</span>
+                      <p className="text-[10px] font-black text-[#8A938D] uppercase tracking-wider">Total Ingested</p>
+                    </div>
+                    <span className="text-[9px] text-[#8A938D] uppercase font-mono">Database Total</span>
+                  </div>
+                  {settingsLoading ? (
+                    <SkeletonLine w="w-16" />
+                  ) : (
+                    <p className="text-2xl font-black text-[#00FF66] font-mono leading-none">
+                      {settings?.totalApplicants ?? "—"}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </section>
+          </div>
 
           {/* ── 3. Room Management ───────────────────────────────────────────── */}
-          <section className="glass-card p-6 rounded-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[#00FF66]/10 flex items-center justify-center flex-shrink-0 border border-[#00FF66]/20">
-                  <span className="material-symbols-outlined text-[#00FF66] text-[20px] font-bold">meeting_room</span>
+          <section className="bg-[#101412] p-6 sm:p-7 rounded-2xl border border-[#1D2A22] shadow-xl hover:border-[#1D2A22]/90 transition-all">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[#1D2A22]">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF66]/10 flex items-center justify-center flex-shrink-0 border border-[#00FF66]/25 shadow-[0_0_12px_rgba(0,255,102,0.15)] text-[#00FF66]">
+                  <span className="material-symbols-outlined text-[20px] font-bold">meeting_room</span>
                 </div>
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wider text-[#F5F5F5]">Room Management</h3>
-                  <p className="text-[10px] text-[#8A938D] font-semibold uppercase tracking-wider mt-0.5">
+                  <p className="text-[11px] text-[#8A938D] font-medium tracking-wide mt-0.5">
                     Configure interview rooms, assigned interviewers, and live operational states
                   </p>
                 </div>
@@ -1119,7 +1130,7 @@ export default function AdminSettingsPage() {
               <button
                 onClick={handleOpenAddForm}
                 disabled={showAddRoom}
-                className="px-3.5 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.25)] disabled:opacity-50 disabled:cursor-not-allowed self-start sm:self-auto font-black"
+                className="px-4 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.25)] disabled:opacity-50 disabled:cursor-not-allowed self-start sm:self-auto h-9 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px] font-bold">add</span>
                 Add Room
@@ -1128,7 +1139,7 @@ export default function AdminSettingsPage() {
 
             {/* Inline Add Room Form */}
             {showAddRoom && (
-              <form onSubmit={handleCreateRoom} className="bg-[#0B0D0C] border border-[#00FF66]/30 rounded-xl p-5 mb-6 space-y-4 animate-in fade-in duration-200">
+              <form onSubmit={handleCreateRoom} className="bg-[#080B09] border border-[#00FF66]/40 rounded-2xl p-6 mb-6 space-y-4 animate-in fade-in duration-200 shadow-2xl">
                 <div className="flex items-center justify-between border-b border-[#1D2A22] pb-3">
                   <h4 className="text-xs font-black uppercase tracking-wider text-[#00FF66] flex items-center gap-2">
                     <span className="material-symbols-outlined text-[16px]">add_circle</span>
@@ -1145,7 +1156,7 @@ export default function AdminSettingsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[9px] text-[#8A938D] font-bold uppercase tracking-wider block">
+                    <label className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider block">
                       Room Number *
                     </label>
                     <input
@@ -1161,12 +1172,12 @@ export default function AdminSettingsPage() {
                         }
                       }}
                       placeholder="e.g. 4"
-                      className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs text-[#F5F5F5] font-mono focus:outline-none focus:border-[#00FF66] transition-colors font-bold"
+                      className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl px-3.5 py-2.5 text-xs text-[#F5F5F5] font-mono focus:outline-none focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] transition-colors font-bold h-10"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[9px] text-[#8A938D] font-bold uppercase tracking-wider block">
+                    <label className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider block">
                       Room Name / Label
                     </label>
                     <input
@@ -1174,13 +1185,13 @@ export default function AdminSettingsPage() {
                       value={newRoomName}
                       onChange={(e) => setNewRoomName(e.target.value)}
                       placeholder="e.g. Room 04"
-                      className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors font-bold uppercase tracking-wider"
+                      className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl px-3.5 py-2.5 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] transition-colors font-bold uppercase tracking-wider h-10"
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-[9px] text-[#8A938D] font-bold uppercase tracking-wider block">
+                      <label className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider block">
                         Assigned Interviewer
                       </label>
                       <button
@@ -1195,7 +1206,7 @@ export default function AdminSettingsPage() {
                     <select
                       value={newAssignedInterviewer}
                       onChange={(e) => setNewAssignedInterviewer(e.target.value)}
-                      className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors font-bold uppercase tracking-wider"
+                      className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl px-3.5 py-2 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] transition-colors font-bold uppercase tracking-wider h-10"
                     >
                       <option value="">-- Unassigned --</option>
                       {identities.map((id) => (
@@ -1210,14 +1221,14 @@ export default function AdminSettingsPage() {
                     type="button"
                     onClick={() => setShowAddRoom(false)}
                     disabled={isCreatingRoom}
-                    className="px-3.5 py-2 bg-[#101412] hover:bg-[#1A201D] border border-[#1D2A22] text-[#8A938D] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-[#101412] hover:bg-[#1A201D] border border-[#1D2A22] text-[#8A938D] rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 h-9"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isCreatingRoom}
-                    className="px-4 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_10px_rgba(0,255,102,0.3)] disabled:opacity-50 font-black"
+                    className="px-5 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_10px_rgba(0,255,102,0.3)] disabled:opacity-50 h-9"
                   >
                     {isCreatingRoom ? (
                       <>
@@ -1237,7 +1248,7 @@ export default function AdminSettingsPage() {
 
             {/* Inline Edit Room Form */}
             {editingRoom && (
-              <form onSubmit={handleSaveEdit} className="bg-[#0B0D0C] border border-[#00FF66]/40 rounded-xl p-5 mb-6 space-y-4 animate-in fade-in duration-200">
+              <form onSubmit={handleSaveEdit} className="bg-[#080B09] border border-[#00FF66]/40 rounded-2xl p-6 mb-6 space-y-4 animate-in fade-in duration-200 shadow-2xl">
                 <div className="flex items-center justify-between border-b border-[#1D2A22] pb-3">
                   <h4 className="text-xs font-black uppercase tracking-wider text-[#00FF66] flex items-center gap-2">
                     <span className="material-symbols-outlined text-[16px]">edit</span>
@@ -1254,7 +1265,7 @@ export default function AdminSettingsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[9px] text-[#8A938D] font-bold uppercase tracking-wider block">
+                    <label className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider block">
                       Room Label / Name
                     </label>
                     <input
@@ -1263,13 +1274,13 @@ export default function AdminSettingsPage() {
                       value={editRoomName}
                       onChange={(e) => setEditRoomName(e.target.value)}
                       placeholder="e.g. Room 01"
-                      className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors font-bold uppercase tracking-wider"
+                      className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl px-3.5 py-2.5 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] transition-colors font-bold uppercase tracking-wider h-10"
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-[9px] text-[#8A938D] font-bold uppercase tracking-wider block">
+                      <label className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider block">
                         Assigned Interviewer
                       </label>
                       <button
@@ -1284,7 +1295,7 @@ export default function AdminSettingsPage() {
                     <select
                       value={editAssignedInterviewer}
                       onChange={(e) => setEditAssignedInterviewer(e.target.value)}
-                      className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors font-bold uppercase tracking-wider"
+                      className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl px-3.5 py-2 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] transition-colors font-bold uppercase tracking-wider h-10"
                     >
                       <option value="">-- Unassigned --</option>
                       {identities.map((id) => (
@@ -1299,14 +1310,14 @@ export default function AdminSettingsPage() {
                     type="button"
                     onClick={() => setEditingRoom(null)}
                     disabled={isUpdatingRoom}
-                    className="px-3.5 py-2 bg-[#101412] hover:bg-[#1A201D] border border-[#1D2A22] text-[#8A938D] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-[#101412] hover:bg-[#1A201D] border border-[#1D2A22] text-[#8A938D] rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 h-9"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isUpdatingRoom}
-                    className="px-4 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_10px_rgba(0,255,102,0.3)] disabled:opacity-50 font-black"
+                    className="px-5 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_10px_rgba(0,255,102,0.3)] disabled:opacity-50 h-9"
                   >
                     {isUpdatingRoom ? (
                       <>
@@ -1326,17 +1337,17 @@ export default function AdminSettingsPage() {
 
             {/* Rooms List */}
             {roomsLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((n) => (
-                  <div key={n} className="h-16 bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg animate-pulse" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[1, 2, 3, 4].map((n) => (
+                  <div key={n} className="h-32 bg-[#080B09] border border-[#1D2A22] rounded-2xl animate-pulse" />
                 ))}
               </div>
             ) : rooms.length === 0 ? (
-              <div className="p-8 text-center bg-[#0B0D0C]/30 border border-dashed border-[#1D2A22] rounded-lg">
+              <div className="p-8 text-center bg-[#080B09] border border-dashed border-[#1D2A22] rounded-2xl">
                 <p className="text-xs text-[#8A938D] font-bold uppercase tracking-wider">No interview rooms configured.</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {rooms.map((room) => {
                   const isDeactivated = room.isActive === false;
                   const hasActiveInterview = room.status === "Occupied" && room.applicant !== null;
@@ -1346,113 +1357,123 @@ export default function AdminSettingsPage() {
                   return (
                     <div
                       key={room._id}
-                      className={`p-4 rounded-xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                      className={`p-5 rounded-2xl border transition-all flex flex-col justify-between gap-4 ${
                         isDeactivated
-                          ? "bg-[#0B0D0C]/30 border-[#1D2A22]/50 opacity-60"
+                          ? "bg-[#080B09]/40 border-[#1D2A22]/50 opacity-60"
                           : hasActiveInterview
-                          ? "bg-[#00FF66]/5 border-[#00FF66]/30 shadow-[0_0_10px_rgba(0,255,102,0.05)]"
-                          : "bg-[#0B0D0C]/50 border-[#1D2A22] hover:border-[#1D2A22]/80"
+                          ? "bg-gradient-to-br from-[#00FF66]/[0.08] to-[#101412] border-[#00FF66]/40 shadow-[0_0_15px_rgba(0,255,102,0.08)]"
+                          : "bg-[#080B09]/60 border-[#1D2A22] hover:border-[#1D2A22]/80 hover:bg-[#0B0E0C]"
                       }`}
                     >
-                      {/* Left: Info */}
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-mono font-black text-sm border ${
-                          isDeactivated
-                            ? "bg-[#101412] text-[#8A938D] border-[#1D2A22]"
-                            : hasActiveInterview
-                            ? "bg-[#00FF66]/10 text-[#00FF66] border-[#00FF66]/30"
-                            : "bg-[#101412] text-[#F5F5F5] border-[#1D2A22]"
-                        }`}>
-                          {String(room.roomNumber).padStart(2, "0")}
-                        </div>
+                      {/* Top Header of Room Card */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`w-11 h-11 rounded-xl flex items-center justify-center font-mono font-black text-sm border shadow-sm flex-shrink-0 ${
+                              isDeactivated
+                                ? "bg-[#101412] text-[#8A938D] border-[#1D2A22]"
+                                : hasActiveInterview
+                                ? "bg-[#00FF66]/15 text-[#00FF66] border-[#00FF66]/40 shadow-[0_0_10px_rgba(0,255,102,0.2)]"
+                                : "bg-[#101412] text-[#F5F5F5] border-[#1D2A22]"
+                            }`}
+                          >
+                            {String(room.roomNumber).padStart(2, "0")}
+                          </div>
 
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-bold text-[#F5F5F5] uppercase tracking-wide">
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-black text-[#F5F5F5] uppercase tracking-wide truncate">
                               {room.name || `Room ${String(room.roomNumber).padStart(2, "0")}`}
                             </h4>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider flex items-center gap-1 border ${
-                                isDeactivated
-                                  ? "bg-[#FF4D4D]/10 text-[#FF4D4D] border-[#FF4D4D]/20"
-                                  : hasActiveInterview
-                                  ? "bg-[#00FF66]/10 text-[#00FF66] border-[#00FF66]/20"
-                                  : isOccupiedWithoutApp
-                                  ? "bg-[#38BDF8]/10 text-[#38BDF8] border-[#38BDF8]/20"
-                                  : "bg-[#8A938D]/10 text-[#8A938D] border-[#8A938D]/20"
-                              }`}
-                            >
-                              <span
-                                className={`w-1 h-1 rounded-full ${
-                                  isDeactivated
-                                    ? "bg-[#FF4D4D]"
-                                    : hasActiveInterview
-                                    ? "bg-[#00FF66] animate-pulse"
-                                    : isOccupiedWithoutApp
-                                    ? "bg-[#38BDF8]"
-                                    : "bg-[#8A938D]"
-                                }`}
-                              />
-                              {isDeactivated
-                                ? "Deactivated"
-                                : hasActiveInterview
-                                ? "Live Interview"
-                                : isOccupiedWithoutApp
-                                ? "Registered"
-                                : "Available"}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-4 text-xs mt-1">
-                            <span className="text-[#8A938D] font-medium flex items-center gap-1 text-[11px]">
+                            <div className="flex items-center gap-1.5 text-xs mt-1 text-[#8A938D]">
                               <span className="material-symbols-outlined text-xs">person</span>
-                              Assigned:{" "}
-                              <strong className="text-[#F5F5F5] font-semibold">
-                                {room.assignedInterviewer || "None"}
-                              </strong>
-                            </span>
-                            {hasActiveInterview && (
-                              <span className="text-[#00FF66] font-medium text-[11px]">
-                                Candidate: {room.applicant?.name} ({room.applicant?.rollNumber})
+                              <span className="text-[11px] font-medium truncate">
+                                {room.assignedInterviewer ? (
+                                  <strong className="text-[#F5F5F5] font-semibold">{room.assignedInterviewer}</strong>
+                                ) : (
+                                  <span className="text-[#8A938D]/60 italic font-mono uppercase text-[10px]">Unassigned</span>
+                                )}
                               </span>
-                            )}
+                            </div>
                           </div>
                         </div>
+
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 border flex-shrink-0 ${
+                            isDeactivated
+                              ? "bg-[#FF4D4D]/10 text-[#FF4D4D] border-[#FF4D4D]/25"
+                              : hasActiveInterview
+                              ? "bg-[#00FF66]/15 text-[#00FF66] border-[#00FF66]/30 shadow-[0_0_8px_rgba(0,255,102,0.2)]"
+                              : isOccupiedWithoutApp
+                              ? "bg-[#38BDF8]/10 text-[#38BDF8] border-[#38BDF8]/25"
+                              : "bg-[#8A938D]/10 text-[#8A938D] border-[#8A938D]/25"
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              isDeactivated
+                                ? "bg-[#FF4D4D]"
+                                : hasActiveInterview
+                                ? "bg-[#00FF66] animate-pulse"
+                                : isOccupiedWithoutApp
+                                ? "bg-[#38BDF8]"
+                                : "bg-[#8A938D]"
+                            }`}
+                          />
+                          {isDeactivated
+                            ? "Deactivated"
+                            : hasActiveInterview
+                            ? "Live Interview"
+                            : isOccupiedWithoutApp
+                            ? "Registered"
+                            : "Available"}
+                        </span>
                       </div>
 
-                      {/* Right: Actions */}
-                      <div className="flex items-center gap-2 self-end md:self-auto">
-                        <button
-                          onClick={() => handleStartEdit(room)}
-                          disabled={isProcessing}
-                          className="px-2.5 py-1.5 bg-[#101412] hover:bg-[#1A201D] hover:text-[#00FF66] border border-[#1D2A22] text-[#8A938D] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1"
-                          title="Edit Room Name & Interviewer"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">edit</span>
-                          Edit
-                        </button>
-
-                        <button
-                          onClick={() => handleToggleActive(room)}
-                          disabled={isProcessing || (room.isActive && hasActiveInterview)}
-                          className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-colors flex items-center gap-1 ${
-                            room.isActive
-                              ? "bg-[#FFB020]/10 hover:bg-[#FFB020]/20 text-[#FFB020] border-[#FFB020]/30 disabled:opacity-40 disabled:cursor-not-allowed"
-                              : "bg-[#00FF66]/10 hover:bg-[#00FF66]/20 text-[#00FF66] border-[#00FF66]/30"
-                          }`}
-                          title={
-                            room.isActive && hasActiveInterview
-                              ? "Cannot deactivate during an active interview"
-                              : room.isActive
-                              ? "Deactivate room"
-                              : "Activate room"
-                          }
-                        >
-                          <span className="material-symbols-outlined text-[14px]">
-                            {room.isActive ? "pause" : "play_arrow"}
+                      {/* Middle info: Candidate if active */}
+                      {hasActiveInterview && (
+                        <div className="bg-[#00FF66]/5 border border-[#00FF66]/20 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
+                          <span className="text-[10px] uppercase font-bold text-[#8A938D] tracking-wider">Candidate:</span>
+                          <span className="text-[#00FF66] font-mono font-bold text-[11px] truncate ml-2">
+                            {room.applicant?.name} ({room.applicant?.rollNumber})
                           </span>
-                          {room.isActive ? "Deactivate" : "Activate"}
-                        </button>
+                        </div>
+                      )}
+
+                      {/* Bottom Actions Bar */}
+                      <div className="flex items-center justify-between pt-3 border-t border-[#1D2A22]/60 gap-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleStartEdit(room)}
+                            disabled={isProcessing}
+                            className="px-3 py-1.5 bg-[#101412] hover:bg-[#1A201D] hover:text-[#00FF66] border border-[#1D2A22] text-[#8A938D] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5"
+                            title="Edit Room Name & Interviewer"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">edit</span>
+                            Edit
+                          </button>
+
+                          <button
+                            onClick={() => handleToggleActive(room)}
+                            disabled={isProcessing || (room.isActive && hasActiveInterview)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-colors flex items-center gap-1.5 ${
+                              room.isActive
+                                ? "bg-[#FFB020]/10 hover:bg-[#FFB020]/20 text-[#FFB020] border-[#FFB020]/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                                : "bg-[#00FF66]/10 hover:bg-[#00FF66]/20 text-[#00FF66] border-[#00FF66]/30"
+                            }`}
+                            title={
+                              room.isActive && hasActiveInterview
+                                ? "Cannot deactivate during an active interview"
+                                : room.isActive
+                                ? "Deactivate room"
+                                : "Activate room"
+                            }
+                          >
+                            <span className="material-symbols-outlined text-[14px]">
+                              {room.isActive ? "pause" : "play_arrow"}
+                            </span>
+                            {room.isActive ? "Deactivate" : "Activate"}
+                          </button>
+                        </div>
 
                         <button
                           onClick={() => handleDeleteRoom(room)}
@@ -1464,7 +1485,7 @@ export default function AdminSettingsPage() {
                               : "Delete Room"
                           }
                         >
-                          <span className="material-symbols-outlined text-[14px]">delete</span>
+                          <span className="material-symbols-outlined text-[16px]">delete</span>
                         </button>
                       </div>
                     </div>
@@ -1475,22 +1496,22 @@ export default function AdminSettingsPage() {
           </section>
 
           {/* ── 4. Interviewer Management ───────────────────────────────────── */}
-          <section className="glass-card p-6 rounded-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[#00FF66]/10 flex items-center justify-center flex-shrink-0 border border-[#00FF66]/20">
-                  <span className="material-symbols-outlined text-[#00FF66] text-[20px] font-bold">badge</span>
+          <section className="bg-[#101412] p-6 sm:p-7 rounded-2xl border border-[#1D2A22] shadow-xl hover:border-[#1D2A22]/90 transition-all">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[#1D2A22]">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF66]/10 flex items-center justify-center flex-shrink-0 border border-[#00FF66]/25 shadow-[0_0_12px_rgba(0,255,102,0.15)] text-[#00FF66]">
+                  <span className="material-symbols-outlined text-[20px] font-bold">badge</span>
                 </div>
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wider text-[#F5F5F5]">Interviewer Management</h3>
-                  <p className="text-[10px] text-[#8A938D] font-semibold uppercase tracking-wider mt-0.5">
+                  <p className="text-[11px] text-[#8A938D] font-medium tracking-wide mt-0.5">
                     Authorized interviewers, credentials, and room assignment eligibility
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAddInterviewerModal(true)}
-                className="px-3.5 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.25)] self-start sm:self-auto font-black"
+                className="px-4 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.25)] self-start sm:self-auto h-9 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px] font-bold">person_add</span>
                 Add Interviewer
@@ -1499,17 +1520,17 @@ export default function AdminSettingsPage() {
 
             {/* Interviewer Accounts List */}
             {interviewersLoading ? (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[1, 2, 3].map((n) => (
-                  <div key={n} className="h-16 bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg animate-pulse" />
+                  <div key={n} className="h-32 bg-[#080B09] border border-[#1D2A22] rounded-2xl animate-pulse" />
                 ))}
               </div>
             ) : interviewers.length === 0 ? (
-              <div className="p-8 text-center bg-[#0B0D0C]/30 border border-dashed border-[#1D2A22] rounded-lg">
+              <div className="p-8 text-center bg-[#080B09] border border-dashed border-[#1D2A22] rounded-2xl">
                 <p className="text-xs text-[#8A938D] font-bold uppercase tracking-wider">No interviewers found.</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {interviewers.map((interviewer) => {
                   const assignedRoom = rooms.find(
                     (r) => r.assignedInterviewer?.toLowerCase() === interviewer.name.toLowerCase()
@@ -1518,55 +1539,67 @@ export default function AdminSettingsPage() {
                   return (
                     <div
                       key={interviewer.id}
-                      className="p-4 rounded-xl border border-[#1D2A22] bg-[#0B0D0C]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#1D2A22]/80 transition-all"
+                      className="p-5 rounded-2xl border border-[#1D2A22] bg-[#080B09]/60 hover:border-[#1D2A22]/80 hover:bg-[#0B0E0C] flex flex-col justify-between gap-4 transition-all shadow-sm"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-[#101412] border border-[#1D2A22] flex items-center justify-center text-[#00FF66]">
-                          <span className="material-symbols-outlined text-[20px]">person</span>
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-bold text-[#F5F5F5] uppercase tracking-wide">
-                              {interviewer.name}
-                            </h4>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border ${
-                                interviewer.isDefault
-                                  ? "bg-[#00FF66]/10 text-[#00FF66] border-[#00FF66]/20"
-                                  : "bg-[#8A938D]/10 text-[#8A938D] border-[#8A938D]/20"
-                              }`}
-                            >
-                              {interviewer.isDefault ? "Default Interviewer" : "Custom Profile"}
-                            </span>
+                      <div>
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-[#101412] border border-[#1D2A22] flex items-center justify-center text-[#00FF66] shadow-sm flex-shrink-0">
+                              <span className="material-symbols-outlined text-[20px]">person</span>
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="text-sm font-black text-[#F5F5F5] uppercase tracking-wide truncate">
+                                {interviewer.name}
+                              </h4>
+                              <p className="text-[10px] text-[#8A938D] font-mono uppercase tracking-wider">
+                                {interviewer.role || "Interviewer"}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3 text-xs mt-1">
-                            {assignedRoom ? (
-                              <span className="text-[#00FF66] text-[10px] font-bold uppercase tracking-wider">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border flex-shrink-0 ${
+                              interviewer.isDefault
+                                ? "bg-[#00FF66]/10 text-[#00FF66] border-[#00FF66]/20"
+                                : "bg-[#8A938D]/10 text-[#8A938D] border-[#8A938D]/20"
+                            }`}
+                          >
+                            {interviewer.isDefault ? "Default" : "Custom"}
+                          </span>
+                        </div>
+
+                        <div className="pt-2 border-t border-[#1D2A22]/40 text-xs">
+                          {assignedRoom ? (
+                            <div className="flex items-center gap-1.5 text-[#00FF66]">
+                              <span className="material-symbols-outlined text-xs">meeting_room</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider truncate">
                                 Assigned to {assignedRoom.name || `Room ${assignedRoom.roomNumber}`}
                               </span>
-                            ) : (
-                              <span className="text-[#8A938D] text-[10px] font-bold uppercase tracking-wider">
-                                Unassigned · Available for room assignment
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-[#8A938D]">
+                              <span className="material-symbols-outlined text-xs">event_available</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider">
+                                Unassigned · Available
                               </span>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                      <div className="flex items-center justify-between pt-3 border-t border-[#1D2A22]/40">
+                        <span className="px-2.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider bg-[#00FF66]/5 text-[#8A938D] border border-[#1D2A22]">
+                          Active Profile
+                        </span>
                         {!interviewer.isDefault && (
                           <button
                             onClick={() => handleDeleteInterviewer(interviewer)}
                             disabled={deletingInterviewerId === interviewer.id}
-                            className="p-1.5 bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border border-[#FF4D4D]/20 hover:border-[#FF4D4D]/40 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-40 flex items-center justify-center"
+                            className="p-1.5 bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border border-[#FF4D4D]/20 hover:border-[#FF4D4D]/40 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-40 flex items-center justify-center cursor-pointer"
                             title={`Remove "${interviewer.name}" profile`}
                           >
                             <span className="material-symbols-outlined text-[15px]">delete</span>
                           </button>
                         )}
-                        <span className="px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider bg-[#00FF66]/5 text-[#8A938D] border border-[#1D2A22]">
-                          Active Profile
-                        </span>
                       </div>
                     </div>
                   );
@@ -1576,25 +1609,25 @@ export default function AdminSettingsPage() {
           </section>
 
           {/* ── 5. Evaluation Configuration ─────────────────────────────────── */}
-          <section className="glass-card p-6 rounded-xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[#00FF66]/10 flex items-center justify-center flex-shrink-0 border border-[#00FF66]/20">
-                  <span className="material-symbols-outlined text-[#00FF66] text-[20px] font-bold">tune</span>
+          <section className="bg-[#101412] p-6 sm:p-7 rounded-2xl border border-[#1D2A22] shadow-xl hover:border-[#1D2A22]/90 transition-all space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#1D2A22]">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF66]/10 flex items-center justify-center flex-shrink-0 border border-[#00FF66]/25 shadow-[0_0_12px_rgba(0,255,102,0.15)] text-[#00FF66]">
+                  <span className="material-symbols-outlined text-[20px] font-bold">tune</span>
                 </div>
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wider text-[#F5F5F5]">Evaluation Configuration</h3>
-                  <p className="text-[10px] text-[#8A938D] font-semibold uppercase tracking-wider mt-0.5">
+                  <p className="text-[11px] text-[#8A938D] font-medium tracking-wide mt-0.5">
                     Global evaluation criteria and scoring scale applied to all interview workspaces across all events
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 self-start sm:self-auto">
+              <div className="flex items-center gap-2.5 self-start sm:self-auto">
                 <button
                   type="button"
                   onClick={handleResetEvalDefaults}
                   disabled={evalSaving}
-                  className="px-3 py-2 bg-[#101412] hover:bg-[#151D18] text-[#8A938D] hover:text-[#F5F5F5] border border-[#1D2A22] rounded-lg text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40"
+                  className="px-3.5 py-2 bg-[#101412] hover:bg-[#151D18] text-[#8A938D] hover:text-[#F5F5F5] border border-[#1D2A22] rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 h-9"
                   title="Reset to default 5 criteria"
                 >
                   Reset Defaults
@@ -1603,7 +1636,7 @@ export default function AdminSettingsPage() {
                   type="button"
                   onClick={handleSaveEvalConfig}
                   disabled={evalSaving || (!hasEvalChanges && evalCriteria.length > 0)}
-                  className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md ${
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md h-9 ${
                     hasEvalChanges
                       ? "bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] shadow-[0_0_15px_rgba(0,255,102,0.35)] animate-pulse"
                       : "bg-[#00FF66]/20 text-[#00FF66] border border-[#00FF66]/30 hover:bg-[#00FF66]/30"
@@ -1621,23 +1654,23 @@ export default function AdminSettingsPage() {
             {evalLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <div key={n} className="h-16 bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg animate-pulse" />
+                  <div key={n} className="h-16 bg-[#080B09] border border-[#1D2A22] rounded-2xl animate-pulse" />
                 ))}
               </div>
             ) : evalCriteria.length === 0 ? (
-              <div className="p-8 text-center bg-[#0B0D0C]/30 border border-dashed border-[#1D2A22] rounded-lg">
+              <div className="p-8 text-center bg-[#080B09] border border-dashed border-[#1D2A22] rounded-2xl">
                 <p className="text-xs text-[#8A938D] font-bold uppercase tracking-wider">No criteria configured.</p>
               </div>
             ) : (
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {evalCriteria.map((criterion, idx) => (
                   <div
                     key={criterion.id || idx}
-                    className="p-3.5 rounded-xl border border-[#1D2A22] bg-[#0B0D0C]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#1D2A22]/90 transition-all"
+                    className="p-4 rounded-2xl border border-[#1D2A22] bg-[#080B09]/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-[#1D2A22]/90 transition-all shadow-sm"
                   >
                     {/* Left: Reordering & Rank */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="w-6 h-6 rounded-md bg-[#101412] border border-[#1D2A22] text-[#8A938D] text-[10px] font-mono font-bold flex items-center justify-center">
+                    <div className="flex items-center gap-2.5 flex-shrink-0">
+                      <span className="w-8 h-8 rounded-xl bg-[#101412] border border-[#1D2A22] text-[#8A938D] text-xs font-mono font-bold flex items-center justify-center">
                         #{idx + 1}
                       </span>
                       <div className="flex flex-col gap-0.5">
@@ -1645,7 +1678,7 @@ export default function AdminSettingsPage() {
                           type="button"
                           onClick={() => handleMoveCriterion(idx, "up")}
                           disabled={idx === 0 || evalSaving}
-                          className="w-6 h-4 rounded bg-[#101412] hover:bg-[#1A261F] text-[#8A938D] hover:text-[#00FF66] border border-[#1D2A22] flex items-center justify-center text-[10px] disabled:opacity-20 disabled:hover:text-[#8A938D] transition-colors"
+                          className="w-7 h-4 rounded bg-[#101412] hover:bg-[#1A261F] text-[#8A938D] hover:text-[#00FF66] border border-[#1D2A22] flex items-center justify-center text-[10px] disabled:opacity-20 disabled:hover:text-[#8A938D] transition-colors"
                           title="Move Up"
                         >
                           <span className="material-symbols-outlined text-[13px] leading-none">arrow_drop_up</span>
@@ -1654,7 +1687,7 @@ export default function AdminSettingsPage() {
                           type="button"
                           onClick={() => handleMoveCriterion(idx, "down")}
                           disabled={idx === evalCriteria.length - 1 || evalSaving}
-                          className="w-6 h-4 rounded bg-[#101412] hover:bg-[#1A261F] text-[#8A938D] hover:text-[#00FF66] border border-[#1D2A22] flex items-center justify-center text-[10px] disabled:opacity-20 disabled:hover:text-[#8A938D] transition-colors"
+                          className="w-7 h-4 rounded bg-[#101412] hover:bg-[#1A261F] text-[#8A938D] hover:text-[#00FF66] border border-[#1D2A22] flex items-center justify-center text-[10px] disabled:opacity-20 disabled:hover:text-[#8A938D] transition-colors"
                           title="Move Down"
                         >
                           <span className="material-symbols-outlined text-[13px] leading-none">arrow_drop_down</span>
@@ -1663,9 +1696,9 @@ export default function AdminSettingsPage() {
                     </div>
 
                     {/* Middle: Name Input & Max Score Input */}
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3.5 items-center">
                       <div className="sm:col-span-2">
-                        <label className="text-[9px] uppercase tracking-wider text-[#8A938D] font-bold block mb-1">
+                        <label className="text-[9px] uppercase tracking-wider text-[#8A938D] font-black block mb-1">
                           Criterion Name
                         </label>
                         <input
@@ -1673,11 +1706,11 @@ export default function AdminSettingsPage() {
                           value={criterion.name}
                           onChange={(e) => handleUpdateCriterionName(idx, e.target.value)}
                           placeholder="e.g. Technical, Problem Solving"
-                          className="w-full bg-[#101412] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs font-bold text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] outline-none transition-all"
+                          className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl px-3.5 py-2 text-xs font-bold text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] outline-none transition-all h-10"
                         />
                       </div>
                       <div>
-                        <label className="text-[9px] uppercase tracking-wider text-[#8A938D] font-bold block mb-1">
+                        <label className="text-[9px] uppercase tracking-wider text-[#8A938D] font-black block mb-1">
                           Max Score
                         </label>
                         <div className="relative">
@@ -1687,9 +1720,9 @@ export default function AdminSettingsPage() {
                             max={100}
                             value={criterion.maxScore || 10}
                             onChange={(e) => handleUpdateCriterionMaxScore(idx, Number(e.target.value))}
-                            className="w-full bg-[#101412] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs font-mono font-bold text-[#00FF66] focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] outline-none transition-all"
+                            className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl px-3.5 py-2 text-xs font-mono font-bold text-[#00FF66] focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] outline-none transition-all h-10"
                           />
-                          <span className="absolute right-2.5 top-2 text-[10px] text-[#8A938D] pointer-events-none font-bold">
+                          <span className="absolute right-3 top-2.5 text-[10px] text-[#8A938D] pointer-events-none font-bold">
                             PTS
                           </span>
                         </div>
@@ -1697,12 +1730,12 @@ export default function AdminSettingsPage() {
                     </div>
 
                     {/* Right: Delete button */}
-                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
                       <button
                         type="button"
                         onClick={() => handleDeleteCriterion(idx)}
                         disabled={evalCriteria.length <= 1 || evalSaving}
-                        className="p-2 bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border border-[#FF4D4D]/20 hover:border-[#FF4D4D]/40 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="w-10 h-10 bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border border-[#FF4D4D]/20 hover:border-[#FF4D4D]/40 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer"
                         title={evalCriteria.length <= 1 ? "At least one criterion is required" : `Delete "${criterion.name}"`}
                       >
                         <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -1716,10 +1749,10 @@ export default function AdminSettingsPage() {
             {/* Add Criterion Sub-Form */}
             <form
               onSubmit={handleAddCriterion}
-              className="p-4 rounded-xl border border-dashed border-[#1D2A22] bg-[#0B0D0C]/40 flex flex-col sm:flex-row sm:items-end gap-3"
+              className="p-5 rounded-2xl border border-dashed border-[#1D2A22] hover:border-[#00FF66]/40 bg-[#080B09]/40 flex flex-col sm:flex-row sm:items-end gap-3.5 transition-all"
             >
               <div className="flex-1">
-                <label className="text-[9px] uppercase tracking-wider text-[#8A938D] font-bold block mb-1">
+                <label className="text-[9px] uppercase tracking-wider text-[#8A938D] font-black block mb-1">
                   Add New Criterion Name
                 </label>
                 <input
@@ -1727,11 +1760,11 @@ export default function AdminSettingsPage() {
                   value={newCriterionName}
                   onChange={(e) => setNewCriterionName(e.target.value)}
                   placeholder="e.g. Creativity, Critical Thinking"
-                  className="w-full bg-[#101412] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs font-semibold text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] outline-none transition-all"
+                  className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl px-3.5 py-2 text-xs font-semibold text-[#F5F5F5] placeholder:text-[#8A938D]/40 focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] outline-none transition-all h-10"
                 />
               </div>
-              <div className="w-full sm:w-28">
-                <label className="text-[9px] uppercase tracking-wider text-[#8A938D] font-bold block mb-1">
+              <div className="w-full sm:w-32">
+                <label className="text-[9px] uppercase tracking-wider text-[#8A938D] font-black block mb-1">
                   Max Score
                 </label>
                 <input
@@ -1740,13 +1773,13 @@ export default function AdminSettingsPage() {
                   max={100}
                   value={newCriterionMaxScore}
                   onChange={(e) => setNewCriterionMaxScore(Math.max(1, Number(e.target.value)))}
-                  className="w-full bg-[#101412] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs font-mono font-bold text-[#00FF66] focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] outline-none transition-all"
+                  className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl px-3.5 py-2 text-xs font-mono font-bold text-[#00FF66] focus:ring-1 focus:ring-[#00FF66] focus:border-[#00FF66] outline-none transition-all h-10"
                 />
               </div>
               <button
                 type="submit"
                 disabled={!newCriterionName.trim() || evalSaving}
-                className="px-4 py-2 bg-[#00FF66]/10 hover:bg-[#00FF66]/20 text-[#00FF66] border border-[#00FF66]/30 hover:border-[#00FF66]/60 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed self-stretch sm:self-auto h-[38px]"
+                className="px-5 py-2 bg-[#00FF66]/10 hover:bg-[#00FF66]/20 text-[#00FF66] border border-[#00FF66]/30 hover:border-[#00FF66]/60 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed self-stretch sm:self-auto h-10"
               >
                 <span className="material-symbols-outlined text-[16px] font-bold">add</span>
                 Add Criterion
@@ -1755,15 +1788,15 @@ export default function AdminSettingsPage() {
           </section>
 
           {/* ── 6. Google Sheets Integration ─────────────────────────────────── */}
-          <section className="glass-card p-6 rounded-xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[#00FF66]/10 flex items-center justify-center flex-shrink-0 border border-[#00FF66]/20">
-                  <span className="material-symbols-outlined text-[#00FF66] text-[20px] font-bold">table_view</span>
+          <section className="bg-[#101412] p-6 sm:p-7 rounded-2xl border border-[#1D2A22] shadow-xl hover:border-[#1D2A22]/90 transition-all space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#1D2A22]">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF66]/10 flex items-center justify-center flex-shrink-0 border border-[#00FF66]/25 shadow-[0_0_12px_rgba(0,255,102,0.15)] text-[#00FF66]">
+                  <span className="material-symbols-outlined text-[20px] font-bold">table_view</span>
                 </div>
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wider text-[#F5F5F5]">Google Sheets Integration</h3>
-                  <p className="text-[10px] text-[#8A938D] font-semibold uppercase tracking-wider mt-0.5">
+                  <p className="text-[11px] text-[#8A938D] font-medium tracking-wide mt-0.5">
                     Configure multiple spreadsheet sources, test connectivity, preview rows, and import applicants
                   </p>
                 </div>
@@ -1771,7 +1804,7 @@ export default function AdminSettingsPage() {
               <div className="flex items-center gap-2 self-start sm:self-auto">
                 <button
                   onClick={handleOpenAddSheet}
-                  className="px-3.5 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.25)] font-black"
+                  className="px-4 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.25)] h-9 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px] font-bold">add_link</span>
                   Add Spreadsheet
@@ -1781,24 +1814,26 @@ export default function AdminSettingsPage() {
 
             {/* Service Account Sharing Instruction Card */}
             {serviceAccountEmail && (
-              <div className="p-4 rounded-xl border border-[#00FF66]/20 bg-[#00FF66]/5 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <span className="material-symbols-outlined text-[#00FF66] text-[20px] mt-0.5 flex-shrink-0">vpn_key</span>
+              <div className="p-5 rounded-2xl border border-[#00FF66]/25 bg-gradient-to-r from-[#00FF66]/[0.06] to-transparent flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-start gap-3.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#00FF66]/15 border border-[#00FF66]/30 flex items-center justify-center text-[#00FF66] flex-shrink-0 mt-0.5">
+                    <span className="material-symbols-outlined text-[18px]">vpn_key</span>
+                  </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-[#F5F5F5] uppercase tracking-wider">
-                      Google Service Account Sharing
+                    <p className="text-xs font-black text-[#F5F5F5] uppercase tracking-wider">
+                      Google Service Account Permission
                     </p>
                     <p className="text-[11px] text-[#8A938D] mt-0.5">
-                      Share each Google Sheet with this email as <strong className="text-[#00FF66]">Viewer</strong> to grant access:
+                      Share each Google Sheet with this service account email as <strong className="text-[#00FF66]">Viewer</strong>:
                     </p>
-                    <p className="font-mono text-xs text-[#00FF66] break-all select-all mt-1">
+                    <p className="font-mono text-xs text-[#00FF66] break-all select-all mt-1.5 font-bold">
                       {serviceAccountEmail}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={handleCopyEmail}
-                  className="px-3 py-1.5 bg-[#101412] hover:bg-[#1A201D] border border-[#00FF66]/30 text-[#00FF66] rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 flex-shrink-0 self-start md:self-auto"
+                  className="px-4 py-2 bg-[#101412] hover:bg-[#1A201D] border border-[#00FF66]/30 hover:border-[#00FF66]/60 text-[#00FF66] rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 flex-shrink-0 self-start md:self-auto h-9"
                 >
                   <span className="material-symbols-outlined text-[14px]">content_copy</span>
                   Copy Email
@@ -1808,24 +1843,24 @@ export default function AdminSettingsPage() {
 
             {/* Configured Spreadsheets List */}
             {sheetsLoading ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {[1, 2].map((n) => (
-                  <div key={n} className="h-24 bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg animate-pulse" />
+                  <div key={n} className="h-32 bg-[#080B09] border border-[#1D2A22] rounded-2xl animate-pulse" />
                 ))}
               </div>
             ) : sheetSources.length === 0 ? (
-              <div className="p-8 text-center bg-[#0B0D0C]/30 border border-dashed border-[#1D2A22] rounded-lg">
+              <div className="p-8 text-center bg-[#080B09] border border-dashed border-[#1D2A22] rounded-2xl">
                 <p className="text-xs text-[#8A938D] font-bold uppercase tracking-wider">No Google Sheets sources configured.</p>
                 <button
                   onClick={handleOpenAddSheet}
-                  className="mt-3 px-3 py-1.5 bg-[#00FF66]/10 hover:bg-[#00FF66]/20 text-[#00FF66] border border-[#00FF66]/30 rounded-lg text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1"
+                  className="mt-3 px-3.5 py-2 bg-[#00FF66]/10 hover:bg-[#00FF66]/20 text-[#00FF66] border border-[#00FF66]/30 rounded-xl text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5"
                 >
                   <span className="material-symbols-outlined text-[14px]">add</span>
                   Add First Sheet
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {sheetSources.map((source) => {
                   const isTesting = testingSheetId === source._id;
                   const isLoading = loadingSheetId === source._id;
@@ -1836,34 +1871,36 @@ export default function AdminSettingsPage() {
                   return (
                     <div
                       key={source._id}
-                      className={`p-4 rounded-xl border transition-all ${
+                      className={`p-5 sm:p-6 rounded-2xl border transition-all space-y-4 ${
                         isGloballyActive
-                          ? "border-[#00FF66]/80 bg-[#00FF66]/[0.03] shadow-[0_0_20px_rgba(0,255,102,0.12)] ring-1 ring-[#00FF66]/40"
+                          ? "border-[#00FF66]/70 bg-gradient-to-br from-[#00FF66]/[0.05] to-[#101412] shadow-[0_0_25px_rgba(0,255,102,0.1)] ring-1 ring-[#00FF66]/30"
                           : isDeactivated
-                          ? "border-[#1D2A22]/50 bg-[#0B0D0C]/20 opacity-60"
-                          : "border-[#1D2A22] bg-[#0B0D0C]/50 hover:border-[#1D2A22]/80"
+                          ? "border-[#1D2A22]/50 bg-[#080B09]/30 opacity-60"
+                          : "border-[#1D2A22] bg-[#080B09]/60 hover:border-[#1D2A22]/80 hover:bg-[#0B0E0C]"
                       }`}
                     >
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        {/* Source Details */}
-                        <div className="flex items-start gap-3 min-w-0">
-                          <div className={`w-10 h-10 rounded-lg border flex items-center justify-center flex-shrink-0 ${
-                            isGloballyActive
-                              ? "bg-[#00FF66]/20 border-[#00FF66] text-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.3)]"
-                              : source.status === "Connected"
-                              ? "bg-[#00FF66]/10 border-[#00FF66]/30 text-[#00FF66]"
-                              : source.status === "Error"
-                              ? "bg-[#FF4D4D]/10 border-[#FF4D4D]/30 text-[#FF4D4D]"
-                              : "bg-[#101412] border-[#1D2A22] text-[#8A938D]"
-                          }`}>
-                            <span className="material-symbols-outlined text-[20px]">
+                      {/* Header & Status Row */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div
+                            className={`w-11 h-11 rounded-xl border flex items-center justify-center flex-shrink-0 shadow-sm ${
+                              isGloballyActive
+                                ? "bg-[#00FF66]/20 border-[#00FF66] text-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.25)]"
+                                : source.status === "Connected"
+                                ? "bg-[#00FF66]/10 border-[#00FF66]/30 text-[#00FF66]"
+                                : source.status === "Error"
+                                ? "bg-[#FF4D4D]/10 border-[#FF4D4D]/30 text-[#FF4D4D]"
+                                : "bg-[#101412] border-[#1D2A22] text-[#8A938D]"
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[22px]">
                               {isGloballyActive ? "stars" : source.status === "Connected" ? "check_circle" : source.status === "Error" ? "error" : "draft"}
                             </span>
                           </div>
 
-                          <div className="min-w-0 space-y-1">
+                          <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="text-sm font-bold text-[#F5F5F5] uppercase tracking-wide">
+                              <h4 className="text-base font-black text-[#F5F5F5] uppercase tracking-wide truncate">
                                 {source.name}
                               </h4>
                               {isGloballyActive && (
@@ -1888,7 +1925,7 @@ export default function AdminSettingsPage() {
                               >
                                 {source.status}
                               </span>
-                              <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/20 flex items-center gap-1">
+                              <span className="px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/20 flex items-center gap-1">
                                 <span className="material-symbols-outlined text-[10px]">group</span>
                                 {source.applicantCount ?? 0} Applicants
                               </span>
@@ -1898,74 +1935,85 @@ export default function AdminSettingsPage() {
                                 </span>
                               )}
                             </div>
-
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#8A938D]">
-                              <a
-                                href={source.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="font-mono text-[11px] text-[#00FF66]/80 hover:text-[#00FF66] hover:underline flex items-center gap-1"
-                              >
-                                <span className="material-symbols-outlined text-[12px]">open_in_new</span>
-                                {source.spreadsheetId.slice(0, 14)}...
-                              </a>
-                              {source.sheetName && (
-                                <span className="text-[11px]">
-                                  Tab: <strong className="text-[#F5F5F5]">{source.sheetName}</strong>
-                                </span>
-                              )}
-                              {source.lastTestedAt && (
-                                <span className="text-[10px]">
-                                  Tested: {new Date(source.lastTestedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                              )}
-                              {source.lastLoadedAt && (
-                                <span className="text-[10px]">
-                                  Loaded: {new Date(source.lastLoadedAt).toLocaleDateString()} {new Date(source.lastLoadedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Import Stats Badge */}
-                            {source.lastImportStats && source.lastImportStats.totalRows > 0 && (
-                              <p className="text-[10px] text-[#8A938D] font-mono">
-                                Last Import: <span className="text-[#00FF66]">+{source.lastImportStats.imported} added</span> · <span className="text-[#F5F5F5]">{source.lastImportStats.updated} updated</span> · <span className="text-[#8A938D]">{source.lastImportStats.skipped} skipped</span>
-                              </p>
-                            )}
-
-                            {/* Error Banner */}
-                            {source.lastError && (
-                              <p className="text-[11px] text-[#FF4D4D] bg-[#FF4D4D]/5 border border-[#FF4D4D]/20 rounded-lg p-2 mt-1">
-                                {source.lastError}
-                              </p>
-                            )}
                           </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
-                          {/* Global Active Event Action */}
+                        {/* Primary event button in header for instant recognition */}
+                        <div className="flex-shrink-0">
                           {isGloballyActive ? (
-                            <span className="px-3 py-1.5 bg-[#00FF66]/15 border border-[#00FF66]/40 text-[#00FF66] rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 select-none shadow-[0_0_10px_rgba(0,255,102,0.15)]">
-                              <span className="material-symbols-outlined text-[14px] font-bold">check_circle</span>
+                            <span className="px-3.5 py-1.5 bg-[#00FF66]/15 border border-[#00FF66]/40 text-[#00FF66] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 select-none shadow-[0_0_10px_rgba(0,255,102,0.15)]">
+                              <span className="material-symbols-outlined text-[15px] font-bold">check_circle</span>
                               Currently Active
                             </span>
                           ) : (
                             <button
                               onClick={() => handleSetActiveEvent(source)}
                               disabled={isSettingActive === source._id || isDeactivated}
-                              className="px-3 py-1.5 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.25)] hover:shadow-[0_0_18px_rgba(0,255,102,0.4)] disabled:opacity-40 cursor-pointer"
+                              className="px-3.5 py-1.5 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.25)] hover:shadow-[0_0_18px_rgba(0,255,102,0.4)] disabled:opacity-40 cursor-pointer"
                               title={`Set "${source.name}" as the single global active recruitment event across the engine`}
                             >
                               {isSettingActive === source._id ? (
                                 <div className="w-3.5 h-3.5 border-2 border-[#050505]/30 border-t-[#050505] rounded-full animate-spin" />
                               ) : (
-                                <span className="material-symbols-outlined text-[14px] font-bold">radio_button_checked</span>
+                                <span className="material-symbols-outlined text-[15px] font-bold">radio_button_checked</span>
                               )}
                               {isSettingActive === source._id ? "Activating..." : "Set as Active Event"}
                             </button>
                           )}
+                        </div>
+                      </div>
 
+                      {/* Meta Info Row */}
+                      <div className="p-3 bg-[#050505]/50 border border-[#1D2A22]/70 rounded-xl flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-[#8A938D]">
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-[11px] text-[#00FF66]/80 hover:text-[#00FF66] hover:underline flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                          {source.spreadsheetId.slice(0, 18)}...
+                        </a>
+                        {source.sheetName && (
+                          <span className="text-[11px] flex items-center gap-1">
+                            <span className="text-[#8A938D] font-bold uppercase text-[9px]">Tab:</span>
+                            <strong className="text-[#F5F5F5]">{source.sheetName}</strong>
+                          </span>
+                        )}
+                        {source.lastTestedAt && (
+                          <span className="text-[10px] flex items-center gap-1 font-mono">
+                            <span className="text-[#8A938D] font-bold uppercase text-[9px]">Tested:</span>
+                            {new Date(source.lastTestedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        )}
+                        {source.lastLoadedAt && (
+                          <span className="text-[10px] flex items-center gap-1 font-mono">
+                            <span className="text-[#8A938D] font-bold uppercase text-[9px]">Loaded:</span>
+                            {new Date(source.lastLoadedAt).toLocaleDateString()} {new Date(source.lastLoadedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        )}
+                        {source.lastImportStats && source.lastImportStats.totalRows > 0 && (
+                          <span className="text-[10px] text-[#8A938D] font-mono flex items-center gap-1 ml-auto">
+                            <span className="text-[#00FF66]">+{source.lastImportStats.imported} added</span>
+                            <span>·</span>
+                            <span className="text-[#F5F5F5]">{source.lastImportStats.updated} updated</span>
+                            <span>·</span>
+                            <span className="text-[#8A938D]">{source.lastImportStats.skipped} skipped</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Error Banner if applicable */}
+                      {source.lastError && (
+                        <p className="text-[11px] text-[#FF4D4D] bg-[#FF4D4D]/10 border border-[#FF4D4D]/25 rounded-xl p-3 flex items-start gap-2">
+                          <span className="material-symbols-outlined text-sm mt-0.5">error</span>
+                          <span>{source.lastError}</span>
+                        </p>
+                      )}
+
+                      {/* Actions Toolbar */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#1D2A22]/50">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Link
                             href={`/admin/dashboard?eventId=${source._id}`}
                             className="px-3 py-1.5 bg-[#101412] hover:bg-[#1A201D] text-[#8A938D] hover:text-[#00FF66] border border-[#1D2A22] hover:border-[#00FF66]/30 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 group/btn"
@@ -1980,7 +2028,7 @@ export default function AdminSettingsPage() {
                           <button
                             onClick={() => handleTestSheet(source)}
                             disabled={isTesting}
-                            className="px-2.5 py-1.5 bg-[#101412] hover:bg-[#1A201D] hover:text-[#00FF66] border border-[#1D2A22] text-[#8A938D] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1 disabled:opacity-50"
+                            className="px-3 py-1.5 bg-[#101412] hover:bg-[#1A201D] hover:text-[#00FF66] border border-[#1D2A22] text-[#8A938D] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 disabled:opacity-50"
                             title="Test Google Sheets API Connection"
                           >
                             <span className={`material-symbols-outlined text-[14px] ${isTesting ? "animate-spin" : ""}`}>
@@ -1992,7 +2040,7 @@ export default function AdminSettingsPage() {
                           <button
                             onClick={() => handlePreviewSheet(source)}
                             disabled={isPreviewing || isDeactivated}
-                            className="px-2.5 py-1.5 bg-[#101412] hover:bg-[#1A201D] hover:text-[#00FF66] border border-[#1D2A22] text-[#8A938D] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1 disabled:opacity-40"
+                            className="px-3 py-1.5 bg-[#101412] hover:bg-[#1A201D] hover:text-[#00FF66] border border-[#1D2A22] text-[#8A938D] rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 disabled:opacity-40"
                             title="Preview spreadsheet rows before importing"
                           >
                             <span className="material-symbols-outlined text-[14px]">visibility</span>
@@ -2002,7 +2050,7 @@ export default function AdminSettingsPage() {
                           <button
                             onClick={() => handleLoadSheet(source._id, source.name)}
                             disabled={isLoading || isDeactivated}
-                            className="px-3 py-1.5 bg-[#00FF66]/10 text-[#00FF66] hover:bg-[#00FF66]/20 border border-[#00FF66]/30 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 disabled:opacity-40 font-black"
+                            className="px-3.5 py-1.5 bg-[#00FF66]/10 text-[#00FF66] hover:bg-[#00FF66]/20 border border-[#00FF66]/30 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 disabled:opacity-40 shadow-sm"
                             title="Import rows from this sheet into database"
                           >
                             {isLoading ? (
@@ -2012,7 +2060,9 @@ export default function AdminSettingsPage() {
                             )}
                             {isLoading ? "Importing..." : "Load Data"}
                           </button>
+                        </div>
 
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleOpenEditSheet(source)}
                             className="p-1.5 bg-[#101412] hover:bg-[#1A201D] hover:text-[#00FF66] border border-[#1D2A22] text-[#8A938D] rounded-lg text-[10px] transition-colors"
@@ -2062,93 +2112,121 @@ export default function AdminSettingsPage() {
             )}
           </section>
 
-          {/* ── 6. System Information ─────────────────────────────────────────── */}
-          <section className="glass-card p-6 rounded-xl">
-            <SectionHeading
-              icon="info"
-              title="System Information"
-              subtitle="Application build and runtime details"
-            />
-            <div className="bg-[#0B0D0C]/40 border border-[#1D2A22] rounded-lg px-4">
-              <InfoRow label="Application Name" value="NEXUS Recruitment Engine" />
-              <InfoRow
-                label="Version"
-                value={
-                  <span className="font-mono text-[#00FF66]">
-                    {settingsLoading ? "—" : settings?.version ?? "v1.0.0"}
-                  </span>
-                }
+          {/* ── Bottom Grid: System Information & Danger Zone ─────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            {/* ── 7. System Information ───────────────────────────────────────── */}
+            <section className="bg-[#101412] p-6 sm:p-7 rounded-2xl border border-[#1D2A22] shadow-xl hover:border-[#1D2A22]/90 transition-all">
+              <SectionHeading
+                icon="info"
+                title="System Information"
+                subtitle="Application build, runtime details and engine metadata"
               />
-              <InfoRow label="Framework" value="Next.js (App Router)" />
-              <InfoRow label="Database" value="MongoDB Atlas" />
-              <InfoRow label="Data Source" value="Google Sheets API" />
-              <InfoRow
-                label="Node Version"
-                value={
-                  <span className="font-mono text-[#00FF66]">
-                    {settingsLoading ? "—" : settings?.nodeVersion ?? "—"}
-                  </span>
-                }
-              />
-              <InfoRow
-                label="Environment"
-                value={
-                  settingsLoading ? (
-                    "—"
-                  ) : (
-                    <span
-                      className={
-                        settings?.environment === "Production"
-                          ? "text-[#00FF66]"
-                          : "text-[#FFB020]"
-                      }
-                    >
-                      {settings?.environment ?? "—"}
+              <div className="bg-[#080B09] border border-[#1D2A22] rounded-2xl p-2 divide-y divide-[#1D2A22]/40">
+                <InfoRow label="Application" value="NEXUS Recruitment Engine" />
+                <InfoRow
+                  label="Version"
+                  value={
+                    <span className="font-mono text-[#00FF66] font-bold">
+                      {settingsLoading ? "—" : settings?.version ?? "v1.0.0"}
                     </span>
-                  )
-                }
-              />
-            </div>
-          </section>
+                  }
+                />
+                <InfoRow label="Framework" value="Next.js (App Router)" />
+                <InfoRow label="Database Engine" value="MongoDB Atlas" />
+                <InfoRow label="Data Pipeline" value="Google Sheets API v4" />
+                <InfoRow
+                  label="Node Runtime"
+                  value={
+                    <span className="font-mono text-[#00FF66] font-bold">
+                      {settingsLoading ? "—" : settings?.nodeVersion ?? "—"}
+                    </span>
+                  }
+                />
+                <InfoRow
+                  label="Environment"
+                  value={
+                    settingsLoading ? (
+                      "—"
+                    ) : (
+                      <span
+                        className={`font-bold font-mono px-2 py-0.5 rounded-full text-xs border ${
+                          settings?.environment === "Production"
+                            ? "bg-[#00FF66]/10 text-[#00FF66] border-[#00FF66]/30"
+                            : "bg-[#FFB020]/10 text-[#FFB020] border-[#FFB020]/30"
+                        }`}
+                      >
+                        {settings?.environment ?? "—"}
+                      </span>
+                    )
+                  }
+                />
+              </div>
+            </section>
 
-          {/* ── 7. Danger Zone ────────────────────────────────────────────────── */}
-          <section className="border border-[#FF4D4D]/30 bg-[#FF4D4D]/5 rounded-xl p-6">
-            <SectionHeading
-              icon="warning"
-              title="Danger Zone"
-              subtitle="Irreversible client-side actions — proceed with caution"
-            />
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button
-                onClick={handleClearCache}
-                className="flex-1 px-4 py-2.5 bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border border-[#FF4D4D]/30 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
-                Clear Local Cache
-              </button>
-              <button
-                onClick={handleReload}
-                className="flex-1 px-4 py-2.5 bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border border-[#FF4D4D]/30 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined text-[18px]">restart_alt</span>
-                Reload Application
-              </button>
-            </div>
-            <p className="text-[10px] text-[#FF4D4D]/60 mt-4 uppercase font-bold tracking-wider">
-              These actions only affect your browser session. No database data is modified.
-            </p>
-          </section>
+            {/* ── 8. Danger Zone ──────────────────────────────────────────────── */}
+            <section className="border border-[#FF4D4D]/30 bg-[#FF4D4D]/[0.03] rounded-2xl p-6 sm:p-7 shadow-xl">
+              <div className="flex items-start gap-3.5 mb-6 pb-4 border-b border-[#FF4D4D]/20">
+                <div className="w-10 h-10 rounded-xl bg-[#FF4D4D]/10 flex items-center justify-center flex-shrink-0 border border-[#FF4D4D]/25 shadow-[0_0_12px_rgba(255,77,77,0.15)] text-[#FF4D4D]">
+                  <span className="material-symbols-outlined text-[20px] font-bold">warning</span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-[#FF4D4D]">Danger Zone</h3>
+                  <p className="text-[11px] text-[#8A938D] font-medium tracking-wide mt-0.5">
+                    Irreversible client-side actions — proceed with caution
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-[#080B09] border border-[#1D2A22] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-[#F5F5F5] uppercase">Local Storage Cache</p>
+                      <p className="text-[10px] text-[#8A938D] mt-0.5">Purges cached client tokens, temporary session flags, and state</p>
+                    </div>
+                    <button
+                      onClick={handleClearCache}
+                      className="px-3.5 py-2 bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border border-[#FF4D4D]/30 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
+                      Clear Cache
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#080B09] border border-[#1D2A22] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-[#F5F5F5] uppercase">Application Reload</p>
+                      <p className="text-[10px] text-[#8A938D] mt-0.5">Performs a hard window refresh, re-initializing all client contexts</p>
+                    </div>
+                    <button
+                      onClick={handleReload}
+                      className="px-3.5 py-2 bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] border border-[#FF4D4D]/30 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+                      Reload App
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-[#FF4D4D]/70 mt-5 uppercase font-bold tracking-wider text-center">
+                These actions only affect your local browser session. No database records are deleted.
+              </p>
+            </section>
+          </div>
 
         </div>{/* /Canvas */}
       </main>
 
       {/* Add Interviewer Modal */}
       {showAddInterviewerModal && (
-        <div className="fixed inset-0 z-50 bg-[#050505]/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#101412] border border-[#00FF66]/40 rounded-2xl p-6 sm:p-8 w-[min(540px,calc(100vw-32px))] max-w-[540px] min-w-0 max-h-[calc(100vh-32px)] overflow-y-auto shadow-2xl relative space-y-6 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-[#050505]/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-[#0F1411] border border-[#1D2A22] hover:border-[#00FF66]/40 rounded-2xl p-6 sm:p-8 w-[min(540px,calc(100vw-32px))] max-w-[540px] min-w-0 max-h-[calc(100vh-32px)] overflow-y-auto shadow-2xl relative space-y-6 animate-in zoom-in-95 duration-200 transition-all">
             <div className="flex items-center justify-between border-b border-[#1D2A22] pb-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-[#00FF66]/10 border border-[#00FF66]/20 flex items-center justify-center text-[#00FF66] flex-shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/25 flex items-center justify-center text-[#00FF66] flex-shrink-0">
                   <span className="material-symbols-outlined text-[18px]">person_add</span>
                 </div>
                 <div className="min-w-0">
@@ -2159,7 +2237,7 @@ export default function AdminSettingsPage() {
               <button
                 type="button"
                 onClick={() => setShowAddInterviewerModal(false)}
-                className="text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#1D2A22]/50 transition-colors p-1 rounded-lg flex-shrink-0"
+                className="text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#1D2A22]/50 transition-colors p-1.5 rounded-xl flex-shrink-0"
               >
                 <span className="material-symbols-outlined text-sm font-bold">close</span>
               </button>
@@ -2176,7 +2254,7 @@ export default function AdminSettingsPage() {
                   value={newInterviewerName}
                   onChange={(e) => setNewInterviewerName(e.target.value)}
                   placeholder="e.g. Zaid Khan"
-                  className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-3 py-2.5 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors font-bold uppercase tracking-wider placeholder:text-[#8A938D]/40"
+                  className="w-full bg-[#050505] border border-[#1D2A22] rounded-xl px-3.5 py-2.5 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] transition-colors font-bold uppercase tracking-wider placeholder:text-[#8A938D]/40 h-10"
                   autoFocus
                 />
                 <p className="text-[10px] text-[#8A938D]/80 font-medium tracking-wide leading-relaxed">
@@ -2189,14 +2267,14 @@ export default function AdminSettingsPage() {
                   type="button"
                   onClick={() => setShowAddInterviewerModal(false)}
                   disabled={isCreatingInterviewer}
-                  className="w-full sm:w-auto px-4 py-2 bg-[#101412] hover:bg-[#1A201D] border border-[#1D2A22] text-[#8A938D] hover:text-[#F5F5F5] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 text-center"
+                  className="w-full sm:w-auto px-4 py-2 bg-[#101412] hover:bg-[#1A201D] border border-[#1D2A22] text-[#8A938D] hover:text-[#F5F5F5] rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 text-center h-10"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isCreatingInterviewer}
-                  className="w-full sm:w-auto px-4 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(0,255,102,0.3)] disabled:opacity-50 font-black"
+                  className="w-full sm:w-auto px-5 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(0,255,102,0.3)] disabled:opacity-50 h-10"
                 >
                   {isCreatingInterviewer ? (
                     <>
@@ -2218,11 +2296,11 @@ export default function AdminSettingsPage() {
 
       {/* Add / Edit Spreadsheet Modal */}
       {showSheetModal && (
-        <div className="fixed inset-0 z-50 bg-[#050505]/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#101412] border border-[#00FF66]/40 rounded-2xl p-6 sm:p-8 w-[min(540px,calc(100vw-32px))] max-w-[540px] min-w-0 max-h-[calc(100vh-32px)] overflow-y-auto shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-[#050505]/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-[#0F1411] border border-[#1D2A22] hover:border-[#00FF66]/40 rounded-2xl p-6 sm:p-8 w-[min(560px,calc(100vw-32px))] max-w-[560px] min-w-0 max-h-[calc(100vh-32px)] overflow-y-auto shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-200 transition-all">
             <div className="flex items-center justify-between border-b border-[#1D2A22] pb-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-[#00FF66]/10 border border-[#00FF66]/20 flex items-center justify-center text-[#00FF66] flex-shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/25 flex items-center justify-center text-[#00FF66] flex-shrink-0">
                   <span className="material-symbols-outlined text-[18px]">table_view</span>
                 </div>
                 <div className="min-w-0">
@@ -2230,14 +2308,14 @@ export default function AdminSettingsPage() {
                     {editingSheet ? "Edit Spreadsheet Source" : "Add Spreadsheet Source"}
                   </h3>
                   <p className="text-[10px] text-[#8A938D] font-bold uppercase tracking-wider truncate">
-                    Configure Google Sheets URL & Worksheet
+                    Configure Google Sheets URL &amp; Worksheet
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowSheetModal(false)}
-                className="text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#1D2A22]/50 transition-colors p-1 rounded-lg flex-shrink-0"
+                className="text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#1D2A22]/50 transition-colors p-1.5 rounded-xl flex-shrink-0"
               >
                 <span className="material-symbols-outlined text-sm font-bold">close</span>
               </button>
@@ -2254,7 +2332,7 @@ export default function AdminSettingsPage() {
                   value={sheetFormName}
                   onChange={(e) => setSheetFormName(e.target.value)}
                   placeholder="e.g. Round 2 Late Registrations"
-                  className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-3 py-2.5 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors font-bold uppercase tracking-wider placeholder:text-[#8A938D]/40"
+                  className="w-full bg-[#050505] border border-[#1D2A22] rounded-xl px-3.5 py-2.5 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] transition-colors font-bold uppercase tracking-wider placeholder:text-[#8A938D]/40 h-10"
                 />
               </div>
 
@@ -2268,14 +2346,14 @@ export default function AdminSettingsPage() {
                   value={sheetFormUrl}
                   onChange={(e) => setSheetFormUrl(e.target.value)}
                   placeholder="https://docs.google.com/spreadsheets/d/1BxiMVs.../edit"
-                  className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-3 py-2.5 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors font-mono placeholder:text-[#8A938D]/40 text-[11px]"
+                  className="w-full bg-[#050505] border border-[#1D2A22] rounded-xl px-3.5 py-2.5 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] transition-colors font-mono placeholder:text-[#8A938D]/40 text-[11px] h-10"
                 />
                 <p className="text-[10px] text-[#8A938D]/80 font-medium tracking-wide leading-relaxed">
                   Paste the full browser URL or the 44-character Spreadsheet ID. Make sure to share the sheet with the Service Account.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div className="space-y-1.5">
                   <label className="text-[9px] text-[#8A938D] font-black uppercase tracking-wider block">
                     Worksheet Tab (Optional)
@@ -2285,9 +2363,9 @@ export default function AdminSettingsPage() {
                     value={sheetFormTab}
                     onChange={(e) => setSheetFormTab(e.target.value)}
                     placeholder="e.g. Form Responses 1"
-                    className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors placeholder:text-[#8A938D]/40"
+                    className="w-full bg-[#050505] border border-[#1D2A22] rounded-xl px-3.5 py-2 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] transition-colors placeholder:text-[#8A938D]/40 h-10"
                   />
-                  <span className="text-[9px] text-[#8A938D]/70 block">Leave blank for first tab</span>
+                  <span className="text-[9px] text-[#8A938D]/70 block font-mono">Leave blank for first tab</span>
                 </div>
 
                 <div className="space-y-1.5">
@@ -2299,9 +2377,9 @@ export default function AdminSettingsPage() {
                     value={sheetFormRange}
                     onChange={(e) => setSheetFormRange(e.target.value)}
                     placeholder="e.g. A:Z"
-                    className="w-full bg-[#050505] border border-[#1D2A22] rounded-lg px-3 py-2 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] transition-colors placeholder:text-[#8A938D]/40 font-mono"
+                    className="w-full bg-[#050505] border border-[#1D2A22] rounded-xl px-3.5 py-2 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] transition-colors placeholder:text-[#8A938D]/40 font-mono h-10"
                   />
-                  <span className="text-[9px] text-[#8A938D]/70 block">Default covers all columns</span>
+                  <span className="text-[9px] text-[#8A938D]/70 block font-mono">Default covers all columns</span>
                 </div>
               </div>
 
@@ -2310,14 +2388,14 @@ export default function AdminSettingsPage() {
                   type="button"
                   onClick={() => setShowSheetModal(false)}
                   disabled={isSavingSheet}
-                  className="w-full sm:w-auto px-4 py-2 bg-[#101412] hover:bg-[#1A201D] border border-[#1D2A22] text-[#8A938D] hover:text-[#F5F5F5] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 text-center"
+                  className="w-full sm:w-auto px-4 py-2 bg-[#101412] hover:bg-[#1A201D] border border-[#1D2A22] text-[#8A938D] hover:text-[#F5F5F5] rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 text-center h-10"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingSheet}
-                  className="w-full sm:w-auto px-4 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(0,255,102,0.3)] disabled:opacity-50 font-black"
+                  className="w-full sm:w-auto px-5 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(0,255,102,0.3)] disabled:opacity-50 h-10"
                 >
                   {isSavingSheet ? (
                     <>
@@ -2339,11 +2417,11 @@ export default function AdminSettingsPage() {
 
       {/* Preview Data Modal */}
       {previewData && (
-        <div className="fixed inset-0 z-50 bg-[#050505]/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#101412] border border-[#00FF66]/40 rounded-2xl p-6 sm:p-8 w-[min(940px,calc(100vw-32px))] max-w-[940px] min-w-0 max-h-[calc(100vh-32px)] overflow-y-auto shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-[#050505]/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-[#0F1411] border border-[#1D2A22] hover:border-[#00FF66]/40 rounded-2xl p-6 sm:p-8 w-[min(940px,calc(100vw-32px))] max-w-[940px] min-w-0 max-h-[calc(100vh-32px)] overflow-y-auto shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-200 transition-all">
             <div className="flex items-center justify-between border-b border-[#1D2A22] pb-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-[#00FF66]/10 border border-[#00FF66]/20 flex items-center justify-center text-[#00FF66] flex-shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/25 flex items-center justify-center text-[#00FF66] flex-shrink-0">
                   <span className="material-symbols-outlined text-[18px]">preview</span>
                 </div>
                 <div className="min-w-0">
@@ -2358,14 +2436,14 @@ export default function AdminSettingsPage() {
               <button
                 type="button"
                 onClick={() => setPreviewData(null)}
-                className="text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#1D2A22]/50 transition-colors p-1 rounded-lg flex-shrink-0"
+                className="text-[#8A938D] hover:text-[#F5F5F5] hover:bg-[#1D2A22]/50 transition-colors p-1.5 rounded-xl flex-shrink-0"
               >
                 <span className="material-symbols-outlined text-sm font-bold">close</span>
               </button>
             </div>
 
             {/* Detected Column Mappings Overview */}
-            <div className="bg-[#0B0D0C] border border-[#1D2A22] rounded-xl p-3.5 space-y-2">
+            <div className="bg-[#080B09] border border-[#1D2A22] rounded-xl p-4 space-y-2">
               <p className="text-[9px] font-black uppercase tracking-wider text-[#8A938D]">
                 Detected Field Mappings
               </p>
@@ -2373,7 +2451,7 @@ export default function AdminSettingsPage() {
                 {Object.entries(previewData.detectedMappings).map(([field, mappedHeader]) => (
                   <span
                     key={field}
-                    className="px-2.5 py-1 rounded-md bg-[#101412] border border-[#1D2A22] text-[#F5F5F5] flex items-center gap-1.5"
+                    className="px-2.5 py-1 rounded-lg bg-[#101412] border border-[#1D2A22] text-[#F5F5F5] flex items-center gap-1.5"
                   >
                     <span className="text-[#8A938D] font-bold uppercase">{field}:</span>
                     <strong className="text-[#00FF66] font-mono">{mappedHeader}</strong>
@@ -2386,7 +2464,7 @@ export default function AdminSettingsPage() {
             <div className="border border-[#1D2A22] rounded-xl overflow-hidden bg-[#050505]">
               <div className="max-h-[320px] overflow-auto custom-scrollbar">
                 <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-[#0B0D0C] sticky top-0 border-b border-[#1D2A22] z-10">
+                  <thead className="bg-[#080B09] sticky top-0 border-b border-[#1D2A22] z-10">
                     <tr>
                       <th className="p-2.5 text-[9px] font-black text-[#8A938D] uppercase tracking-wider border-r border-[#1D2A22] w-12 text-center">
                         #
@@ -2410,7 +2488,7 @@ export default function AdminSettingsPage() {
                         {previewData.headers.map((header, colIdx) => (
                           <td
                             key={colIdx}
-                            className="p-2 text-[11px] text-[#F5F5F5] whitespace-nowrap border-r border-[#1D2A22] max-w-[200px] truncate"
+                            className="p-2 text-[11px] text-[#F5F5F5] whitespace-nowrap border-r border-[#1D2A22] max-w-[200px] truncate font-mono"
                             title={row[header]}
                           >
                             {row[header] || <span className="text-[#8A938D]/40">—</span>}
@@ -2431,7 +2509,7 @@ export default function AdminSettingsPage() {
                 <button
                   type="button"
                   onClick={() => setPreviewData(null)}
-                  className="px-4 py-2 bg-[#101412] hover:bg-[#1A201D] border border-[#1D2A22] text-[#8A938D] hover:text-[#F5F5F5] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors text-center"
+                  className="px-4 py-2 bg-[#101412] hover:bg-[#1A201D] border border-[#1D2A22] text-[#8A938D] hover:text-[#F5F5F5] rounded-xl text-xs font-bold uppercase tracking-wider transition-colors text-center h-10"
                 >
                   Close
                 </button>
@@ -2439,7 +2517,7 @@ export default function AdminSettingsPage() {
                   type="button"
                   onClick={() => handleLoadSheet(previewData.sourceId, previewData.sourceName)}
                   disabled={loadingSheetId === previewData.sourceId}
-                  className="px-4 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(0,255,102,0.3)] disabled:opacity-50 font-black"
+                  className="px-5 py-2 bg-[#00FF66] text-[#050505] hover:bg-[#00E55C] rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(0,255,102,0.3)] disabled:opacity-50 h-10"
                 >
                   {loadingSheetId === previewData.sourceId ? (
                     <>
@@ -2462,17 +2540,17 @@ export default function AdminSettingsPage() {
       {/* Toast ────────────────────────────────────────────────────────────────── */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 p-4 rounded-xl flex items-start gap-4 shadow-2xl border bg-[#101412] w-auto max-w-[380px] ${
-            toast.type === "success" ? "border-[#00FF66]/30 text-[#00FF66]" : "border-[#FF4D4D]/30 text-[#FF4D4D]"
+          className={`fixed bottom-6 right-6 z-50 p-4 rounded-2xl flex items-start gap-3.5 shadow-2xl border bg-[#0F1411]/95 backdrop-blur-md w-auto max-w-[400px] animate-in slide-in-from-bottom-3 duration-200 ${
+            toast.type === "success" ? "border-[#00FF66]/40 text-[#00FF66] shadow-[0_0_20px_rgba(0,255,102,0.15)]" : "border-[#FF4D4D]/40 text-[#FF4D4D] shadow-[0_0_20px_rgba(255,77,77,0.15)]"
           }`}
         >
-          <span className="material-symbols-outlined mt-0.5 flex-shrink-0">
+          <span className="material-symbols-outlined mt-0.5 flex-shrink-0 text-[20px]">
             {toast.type === "success" ? "check_circle" : "error"}
           </span>
           <p className="font-body-md text-[#F5F5F5] text-xs font-bold uppercase tracking-wider flex-1">{toast.message}</p>
           <button
             onClick={() => setToast(null)}
-            className="text-[#8A938D] hover:text-[#F5F5F5] ml-2 flex-shrink-0"
+            className="text-[#8A938D] hover:text-[#F5F5F5] ml-2 flex-shrink-0 p-1"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
