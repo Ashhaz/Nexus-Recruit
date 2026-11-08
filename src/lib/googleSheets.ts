@@ -16,34 +16,121 @@ export function extractSpreadsheetId(input: string): string {
 }
 
 /**
- * Reads the client_email from the configured service account credentials file.
+ * Service account credential structure.
+ */
+export interface ServiceAccountCredentials {
+  type?: string;
+  project_id?: string;
+  private_key_id?: string;
+  private_key?: string;
+  client_email?: string;
+  client_id?: string;
+  auth_uri?: string;
+  token_uri?: string;
+  auth_provider_x509_cert_url?: string;
+  client_x509_cert_url?: string;
+  [key: string]: any;
+}
+
+/**
+ * Loads service account credentials from GOOGLE_APPLICATION_CREDENTIALS.
+ * Supports two formats using this SAME environment variable:
+ *   1. Vercel deployment: JSON string beginning with '{' -> parsed directly with JSON.parse().
+ *   2. Local development: File path -> loaded from filesystem.
+ */
+export function getServiceAccountCredentials(): ServiceAccountCredentials {
+  const rawValue = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
+
+  if (!rawValue) {
+    throw new Error(
+      "GOOGLE_APPLICATION_CREDENTIALS is not defined in environment variables. Please check your configuration."
+    );
+  }
+
+  // Format 1: Vercel deployment (JSON string beginning with '{')
+  if (rawValue.startsWith("{")) {
+    let parsed: any;
+    try {
+      parsed = JSON.parse(rawValue);
+      if (typeof parsed === "string") {
+        parsed = JSON.parse(parsed);
+      }
+    } catch {
+      throw new Error(
+        "Failed to parse GOOGLE_APPLICATION_CREDENTIALS: Value begins with '{' but is not valid JSON."
+      );
+    }
+
+    if (!parsed || typeof parsed !== "object" || !parsed.client_email || !parsed.private_key) {
+      throw new Error(
+        "Invalid GOOGLE_APPLICATION_CREDENTIALS JSON: Missing required 'client_email' or 'private_key'."
+      );
+    }
+
+    if (typeof parsed.private_key === "string") {
+      parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+    }
+
+    return parsed as ServiceAccountCredentials;
+  }
+
+  // Format 2: Local development (filesystem path)
+  const resolvedPath = path.isAbsolute(rawValue)
+    ? rawValue
+    : path.resolve(/*turbopackIgnore: true*/ process.cwd(), rawValue);
+
+  if (!fs.existsSync(resolvedPath)) {
+    throw new Error(
+      `Google service account credentials file not found at: "${rawValue}". On Vercel, paste the full JSON string starting with '{' into GOOGLE_APPLICATION_CREDENTIALS.`
+    );
+  }
+
+  try {
+    const fileContent = fs.readFileSync(resolvedPath, "utf-8");
+    const parsed = JSON.parse(fileContent);
+
+    if (!parsed || typeof parsed !== "object" || !parsed.client_email || !parsed.private_key) {
+      throw new Error(
+        `Invalid credentials file at "${rawValue}": Missing 'client_email' or 'private_key'.`
+      );
+    }
+
+    if (typeof parsed.private_key === "string") {
+      parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+    }
+
+    return parsed as ServiceAccountCredentials;
+  } catch (err: any) {
+    if (err.message && err.message.includes("Invalid credentials file")) {
+      throw err;
+    }
+    throw new Error(
+      `Failed to read or parse Google service account file at "${rawValue}": ${err.message}`
+    );
+  }
+}
+
+/**
+ * Reads the client_email from the configured service account credentials.
  */
 export function getServiceAccountEmail(): string {
   try {
-    const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-    if (credentialsPath && fs.existsSync(credentialsPath)) {
-      const fileContent = JSON.parse(fs.readFileSync(credentialsPath, "utf-8"));
-      return fileContent.client_email || "";
-    }
-  } catch (e) {
-    console.warn("Could not read service account email from file:", e);
+    const credentials = getServiceAccountCredentials();
+    return credentials.client_email || "";
+  } catch (e: any) {
+    console.warn("Could not read service account email:", e.message);
+    return "";
   }
-  return "";
 }
 
 /**
  * Returns an authenticated Google Sheets API client using server-side service account credentials.
  */
 export function getGoogleSheetsClient() {
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (!credentialsPath) {
-    throw new Error(
-      "GOOGLE_APPLICATION_CREDENTIALS is not defined in environment variables. Please check .env.local"
-    );
-  }
+  const credentials = getServiceAccountCredentials();
 
   const auth = new google.auth.GoogleAuth({
-    keyFile: credentialsPath,
+    credentials,
     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
   });
 
