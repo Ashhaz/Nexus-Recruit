@@ -142,6 +142,24 @@ export default function AdminSettingsPage() {
   const [serviceAccountEmail, setServiceAccountEmail] = useState("");
   const [serviceAccountProjectId, setServiceAccountProjectId] = useState("");
   const [testingSheetId, setTestingSheetId] = useState<string | null>(null);
+  const [testDiagnostics, setTestDiagnostics] = useState<
+    Record<
+      string,
+      {
+        status: "success" | "error";
+        maskedSpreadsheetId?: string;
+        serviceAccountEmail?: string;
+        projectId?: string;
+        title?: string;
+        sheets?: string[];
+        totalDataRows?: number;
+        exactReason?: string;
+        httpStatus?: number;
+        guidance?: string;
+        testedAt: Date;
+      }
+    >
+  >({});
   const [loadingSheetId, setLoadingSheetId] = useState<string | null>(null);
 
   // Add / Edit Sheet Modal
@@ -650,6 +668,28 @@ export default function AdminSettingsPage() {
         body: JSON.stringify({ id: source._id }),
       });
       const json = await res.json();
+
+      setTestDiagnostics((prev) => ({
+        ...prev,
+        [source._id]: {
+          status: json.success ? "success" : "error",
+          maskedSpreadsheetId:
+            json.maskedSpreadsheetId ||
+            (source.spreadsheetId.length > 10
+              ? `${source.spreadsheetId.slice(0, 6)}...${source.spreadsheetId.slice(-4)}`
+              : source.spreadsheetId),
+          serviceAccountEmail: json.serviceAccountEmail || serviceAccountEmail,
+          projectId: json.projectId || serviceAccountProjectId,
+          title: json.title,
+          sheets: json.sheets,
+          totalDataRows: json.totalDataRows,
+          exactReason: json.exactReason || json.error,
+          httpStatus: json.status,
+          guidance: json.guidance,
+          testedAt: new Date(),
+        },
+      }));
+
       if (!res.ok || !json.success) {
         throw new Error(json.error || "Connection test failed.");
       }
@@ -2012,13 +2052,104 @@ export default function AdminSettingsPage() {
                         )}
                       </div>
 
-                      {/* Error Banner if applicable */}
-                      {source.lastError && (
-                        <div className="text-[11px] text-[#FF4D4D] bg-[#FF4D4D]/10 border border-[#FF4D4D]/25 rounded-xl p-3 flex items-start gap-2.5">
-                          <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">error</span>
-                          <span className="leading-relaxed break-words">{source.lastError}</span>
+                      {/* Connection Diagnostics Banner */}
+                      {testDiagnostics[source._id] ? (
+                        testDiagnostics[source._id].status === "success" ? (
+                          <div className="p-3.5 bg-[#00FF66]/10 border border-[#00FF66]/30 rounded-xl space-y-2 text-[11px]">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-[#00FF66] flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-sm">check_circle</span>
+                                Connection Verified: &quot;{testDiagnostics[source._id].title || "Google Sheet"}&quot;
+                              </span>
+                              <span className="text-[10px] text-[#00FF66] font-mono font-bold bg-[#00FF66]/15 px-2 py-0.5 rounded">
+                                HTTP 200 OK
+                              </span>
+                            </div>
+                            <div className="p-2.5 bg-[#050505]/70 rounded-lg space-y-1 text-[10px] font-mono">
+                              <div className="text-[#8A938D]">
+                                Spreadsheet ID:{" "}
+                                <span className="text-[#F5F5F5] font-semibold">
+                                  {testDiagnostics[source._id].maskedSpreadsheetId}
+                                </span>
+                              </div>
+                              <div className="text-[#8A938D]">
+                                Worksheets:{" "}
+                                <span className="text-[#00FF66]">
+                                  {testDiagnostics[source._id].sheets?.join(", ") || "Default"}
+                                </span>{" "}
+                                (~{testDiagnostics[source._id].totalDataRows || 0} rows)
+                              </div>
+                              <div className="text-[#8A938D]">
+                                Authenticated Service Account:{" "}
+                                <span className="text-[#00FF66] font-bold select-all">
+                                  {testDiagnostics[source._id].serviceAccountEmail}
+                                </span>
+                              </div>
+                              {testDiagnostics[source._id].projectId && (
+                                <div className="text-[#8A938D]">
+                                  Google Cloud Project:{" "}
+                                  <span className="text-[#F5F5F5] font-semibold">
+                                    {testDiagnostics[source._id].projectId}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-3.5 bg-[#FF4D4D]/10 border border-[#FF4D4D]/30 rounded-xl space-y-2 text-[11px]">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-[#FF4D4D] flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-sm">cancel</span>
+                                Connection Test Failed
+                              </span>
+                              <span className="text-[10px] text-[#FF4D4D] font-mono font-bold bg-[#FF4D4D]/20 px-2 py-0.5 rounded">
+                                HTTP {testDiagnostics[source._id].httpStatus || 400}
+                              </span>
+                            </div>
+                            <div className="p-2.5 bg-[#050505]/70 rounded-lg space-y-1 text-[10px] font-mono">
+                              <div className="text-[#8A938D]">
+                                Target Spreadsheet ID:{" "}
+                                <span className="text-[#F5F5F5] font-semibold">
+                                  {testDiagnostics[source._id].maskedSpreadsheetId}
+                                </span>
+                              </div>
+                              <div className="text-[#8A938D]">
+                                Authenticated As:{" "}
+                                <span className="text-[#00FF66] font-bold select-all">
+                                  {testDiagnostics[source._id].serviceAccountEmail || "None (unauthenticated)"}
+                                </span>
+                              </div>
+                              {testDiagnostics[source._id].projectId && (
+                                <div className="text-[#8A938D]">
+                                  Google Cloud Project:{" "}
+                                  <span className="text-[#F5F5F5] font-semibold">
+                                    {testDiagnostics[source._id].projectId}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="text-[#FF4D4D] font-semibold pt-0.5">
+                                Reason: {testDiagnostics[source._id].exactReason}
+                              </div>
+                            </div>
+                            {testDiagnostics[source._id].guidance && (
+                              <p className="text-[10px] text-[#F5F5F5]/90 leading-relaxed bg-[#FF4D4D]/15 p-2 rounded-lg border border-[#FF4D4D]/20 font-medium">
+                                <strong className="text-[#00FF66] font-bold">Action Required:</strong>{" "}
+                                {testDiagnostics[source._id].guidance}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      ) : source.lastError ? (
+                        <div className="p-3.5 bg-[#FF4D4D]/10 border border-[#FF4D4D]/30 rounded-xl space-y-2 text-[11px]">
+                          <div className="flex items-center gap-1.5 text-[#FF4D4D] font-bold">
+                            <span className="material-symbols-outlined text-sm">error</span>
+                            Last Connection Status: Error
+                          </div>
+                          <div className="p-2.5 bg-[#050505]/70 rounded-lg text-[10px] font-mono text-[#FF4D4D] leading-relaxed break-words">
+                            {source.lastError}
+                          </div>
                         </div>
-                      )}
+                      ) : null}
 
                       {/* Actions Toolbar */}
                       <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#1D2A22]/50">

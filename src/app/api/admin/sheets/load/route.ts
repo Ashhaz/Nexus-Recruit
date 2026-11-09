@@ -164,8 +164,16 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error("POST /api/admin/sheets/load Error:", error);
+    const isGoogle404 =
+      error.status === 404 ||
+      error.response?.status === 404 ||
+      error.message?.includes("Requested entity was not found");
+    let message = error.message || "Failed to load data from spreadsheet.";
+    if (isGoogle404) {
+      message = "Spreadsheet not accessible (404). Please ensure the spreadsheet exists and is shared with your configured service account as Viewer.";
+    }
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to load data from spreadsheet." },
+      { success: false, error: message },
       { status: 500 }
     );
   }

@@ -113,13 +113,29 @@ export function getServiceAccountCredentials(): ServiceAccountCredentials {
     );
   }
 
-  let cleanedValue = rawValue;
-  // Handle JSON string wrapped in outer quotes (sometimes introduced when pasting env vars)
-  if (cleanedValue.startsWith('"') && cleanedValue.endsWith('"')) {
+  let cleanedValue = rawValue.replace(/^\uFEFF/, "").trim();
+
+  // Handle JSON string wrapped in outer double or single quotes
+  if (
+    (cleanedValue.startsWith('"') && cleanedValue.endsWith('"')) ||
+    (cleanedValue.startsWith("'") && cleanedValue.endsWith("'"))
+  ) {
     try {
       cleanedValue = JSON.parse(cleanedValue);
     } catch {
       cleanedValue = cleanedValue.slice(1, -1).trim();
+    }
+  }
+
+  // Handle Base64-encoded JSON (commonly used in Vercel to preserve newlines)
+  if (typeof cleanedValue === "string" && !cleanedValue.startsWith("{")) {
+    try {
+      const decoded = Buffer.from(cleanedValue, "base64").toString("utf-8").trim();
+      if (decoded.startsWith("{") && decoded.endsWith("}")) {
+        cleanedValue = decoded;
+      }
+    } catch {
+      // not base64 encoded, continue to file path check
     }
   }
 
@@ -157,7 +173,7 @@ export function getServiceAccountCredentials(): ServiceAccountCredentials {
 
   if (!fs.existsSync(resolvedPath)) {
     throw new Error(
-      `Google service account credentials file not found at: "${rawValue}". On Vercel, paste the full JSON string starting with '{' into GOOGLE_APPLICATION_CREDENTIALS.`
+      `Credentials Error: Service account credentials file does not exist at path "${rawValue}". On Vercel, paste the full JSON string starting with '{' into GOOGLE_APPLICATION_CREDENTIALS.`
     );
   }
 
@@ -210,6 +226,30 @@ export function getServiceAccountProjectId(): string {
     return credentials.project_id || "";
   } catch {
     return "";
+  }
+}
+
+/**
+ * Returns safe credential metadata (email and projectId), or the credential error if invalid.
+ */
+export function getServiceAccountDetails(): {
+  email: string;
+  projectId: string;
+  error?: string;
+} {
+  try {
+    const credentials = getServiceAccountCredentials();
+    return {
+      email: credentials.client_email || "",
+      projectId: credentials.project_id || "",
+    };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    return {
+      email: "",
+      projectId: "",
+      error: message,
+    };
   }
 }
 

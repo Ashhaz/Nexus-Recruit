@@ -6,8 +6,7 @@ import {
   extractSpreadsheetId,
   maskSpreadsheetId,
   getSpreadsheetMetadata,
-  getServiceAccountEmail,
-  getServiceAccountProjectId,
+  getServiceAccountDetails,
   fetchSheetRows,
 } from "@/lib/googleSheets";
 
@@ -56,23 +55,42 @@ export async function POST(request: Request) {
       );
     }
 
-    let serviceAccountEmail = "";
-    let projectId = "";
-    try {
-      serviceAccountEmail = getServiceAccountEmail();
-      projectId = getServiceAccountProjectId();
-    } catch (e: any) {
-      console.warn("Could not read service account credentials metadata:", e.message);
-    }
-
     const maskedSpreadsheetId = maskSpreadsheetId(targetSpreadsheetId);
 
+    // 1. Inspect Service Account Authentication Configuration
+    const { email: serviceAccountEmail, projectId, error: authConfigError } = getServiceAccountDetails();
+
+    if (authConfigError) {
+      const authErrorMessage = `[Authentication Configuration Error] ${authConfigError}. Please verify that GOOGLE_APPLICATION_CREDENTIALS in Vercel contains valid service account JSON.`;
+
+      if (sourceDoc) {
+        sourceDoc.status = "Error";
+        sourceDoc.lastError = authErrorMessage;
+        sourceDoc.lastTestedAt = new Date();
+        await sourceDoc.save();
+      }
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: authErrorMessage,
+          status: 500,
+          exactReason: authConfigError,
+          maskedSpreadsheetId,
+          serviceAccountEmail: "Unauthenticated",
+          projectId: "Unknown",
+          guidance: "Please verify that GOOGLE_APPLICATION_CREDENTIALS contains the valid Google Service Account JSON string in Vercel Environment Variables.",
+        },
+        { status: 400 }
+      );
+    }
+
     try {
-      // 1. First retrieve metadata to verify spreadsheet exists and is accessible
+      // 2. Query Google Sheets API for spreadsheet metadata
       const metadata = await getSpreadsheetMetadata(targetSpreadsheetId);
       const targetSheet = sheetName || sourceDoc?.sheetName || metadata.sheets[0];
 
-      // 2. Perform a test row fetch
+      // 3. Query sample data row
       const sample = await fetchSheetRows({
         spreadsheetId: targetSpreadsheetId,
         sheetName: targetSheet,
@@ -103,44 +121,37 @@ export async function POST(request: Request) {
         spreadsheetId: targetSpreadsheetId,
       });
     } catch (testErr: any) {
-      const httpStatus =
-        testErr.status ||
-        testErr.code ||
-        testErr.response?.status ||
-        500;
-      const googleMessage =
-        testErr.response?.data?.error?.message ||
+      const isGoogleApiCall = Boolean(testErr.response);
+      const googleError = testErr.response?.data?.error;
+      const exactReason =
+        googleError?.message ||
         testErr.message ||
         "Failed to connect to Google Sheets";
+      const googleStatusText = googleError?.status || "";
+      const httpStatus =
+        testErr.response?.status ||
+        testErr.status ||
+        testErr.code ||
+        500;
 
-      const is404 =
-        httpStatus === 404 ||
-        googleMessage.includes("404") ||
-        googleMessage.toLowerCase().includes("not found");
-      const is403 =
-        httpStatus === 403 ||
-        googleMessage.includes("403") ||
-        googleMessage.toLowerCase().includes("permission") ||
-        googleMessage.toLowerCase().includes("caller does not have permission");
+      const is404 = isGoogleApiCall && (httpStatus === 404 || googleStatusText === "NOT_FOUND");
+      const is403 = isGoogleApiCall && (httpStatus === 403 || googleStatusText === "PERMISSION_DENIED");
 
-      let userFriendlyError = googleMessage;
       let guidance = "";
+      let fullErrorMessage = "";
 
       if (is404) {
-        userFriendlyError = `Spreadsheet not found (404) for ID [${maskedSpreadsheetId}].`;
-        guidance = serviceAccountEmail
-          ? `Verify that the spreadsheet exists AND is shared with service account: "${serviceAccountEmail}" as Viewer. (Google returns 404 for unshared files). Ensure Google Sheets API is enabled in project "${projectId || "configured project"}".`
-          : `Please check that spreadsheet ID "${maskedSpreadsheetId}" is correct and the file exists.`;
+        guidance = `Verify that this spreadsheet exists AND is shared with service account: "${serviceAccountEmail}" as Viewer. (Google returns 404 when access is not shared). Also ensure Google Sheets API is enabled in Google Cloud project "${projectId}".`;
+        fullErrorMessage = `[Google Sheets API 404: ${exactReason}] Spreadsheet [${maskedSpreadsheetId}] not found for service account "${serviceAccountEmail}". ${guidance}`;
       } else if (is403) {
-        userFriendlyError = `Access denied (403): Service account does not have permission for spreadsheet [${maskedSpreadsheetId}].`;
-        guidance = serviceAccountEmail
-          ? `Please share the Google Sheet with "${serviceAccountEmail}" as Viewer.`
-          : `Please verify service account permissions.`;
+        guidance = `Please share the Google Sheet with "${serviceAccountEmail}" as Viewer.`;
+        fullErrorMessage = `[Google Sheets API 403: ${exactReason}] Access denied for service account "${serviceAccountEmail}". ${guidance}`;
+      } else {
+        guidance = `Verify service account permissions and Google Cloud project configuration.`;
+        fullErrorMessage = isGoogleApiCall
+          ? `[Google Sheets API Error ${httpStatus}: ${exactReason}] Service Account: "${serviceAccountEmail}" (Project: "${projectId}").`
+          : `[Local API Error: ${exactReason}] Service Account: "${serviceAccountEmail || "None"}".`;
       }
-
-      const fullErrorMessage = guidance
-        ? `${userFriendlyError} ${guidance}`
-        : userFriendlyError;
 
       if (sourceDoc) {
         sourceDoc.status = "Error";
@@ -154,7 +165,8 @@ export async function POST(request: Request) {
           success: false,
           error: fullErrorMessage,
           status: httpStatus,
-          googleMessage,
+          exactReason,
+          googleStatusText,
           maskedSpreadsheetId,
           serviceAccountEmail,
           projectId,
