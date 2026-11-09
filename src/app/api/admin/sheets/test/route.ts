@@ -4,8 +4,10 @@ import connectToDatabase from "@/lib/mongodb";
 import SheetSource from "@/models/SheetSource";
 import {
   extractSpreadsheetId,
+  maskSpreadsheetId,
   getSpreadsheetMetadata,
   getServiceAccountEmail,
+  getServiceAccountProjectId,
   fetchSheetRows,
 } from "@/lib/googleSheets";
 
@@ -25,6 +27,7 @@ export async function POST(request: Request) {
     await connectToDatabase();
 
     let targetSpreadsheetId = "";
+    let rawInput = "";
     let sourceDoc: any = null;
 
     if (id) {
@@ -35,25 +38,41 @@ export async function POST(request: Request) {
           { status: 404 }
         );
       }
-      targetSpreadsheetId = sourceDoc.spreadsheetId;
+      rawInput = sourceDoc.spreadsheetId || sourceDoc.url || "";
+      targetSpreadsheetId = extractSpreadsheetId(rawInput);
     } else if (url) {
-      targetSpreadsheetId = extractSpreadsheetId(url);
+      rawInput = String(url).trim();
+      targetSpreadsheetId = extractSpreadsheetId(rawInput);
     }
 
     if (!targetSpreadsheetId) {
       return NextResponse.json(
-        { success: false, error: "Source ID or Google Sheet URL/ID is required." },
+        {
+          success: false,
+          error: "A valid Google Sheets URL or Spreadsheet ID is required.",
+          providedInput: rawInput,
+        },
         { status: 400 }
       );
     }
 
-    const serviceAccountEmail = getServiceAccountEmail();
+    let serviceAccountEmail = "";
+    let projectId = "";
+    try {
+      serviceAccountEmail = getServiceAccountEmail();
+      projectId = getServiceAccountProjectId();
+    } catch (e: any) {
+      console.warn("Could not read service account credentials metadata:", e.message);
+    }
+
+    const maskedSpreadsheetId = maskSpreadsheetId(targetSpreadsheetId);
 
     try {
+      // 1. First retrieve metadata to verify spreadsheet exists and is accessible
       const metadata = await getSpreadsheetMetadata(targetSpreadsheetId);
       const targetSheet = sheetName || sourceDoc?.sheetName || metadata.sheets[0];
 
-      // Quick row count test
+      // 2. Perform a test row fetch
       const sample = await fetchSheetRows({
         spreadsheetId: targetSpreadsheetId,
         sheetName: targetSheet,
@@ -64,6 +83,10 @@ export async function POST(request: Request) {
         sourceDoc.status = "Connected";
         sourceDoc.lastError = null;
         sourceDoc.lastTestedAt = new Date();
+        // If stored spreadsheetId was not normalized, update it to clean ID
+        if (sourceDoc.spreadsheetId !== targetSpreadsheetId) {
+          sourceDoc.spreadsheetId = targetSpreadsheetId;
+        }
         await sourceDoc.save();
       }
 
@@ -75,20 +98,53 @@ export async function POST(request: Request) {
         totalDataRows: sample.totalRows,
         columnCount: sample.headers.length,
         serviceAccountEmail,
+        projectId,
+        maskedSpreadsheetId,
+        spreadsheetId: targetSpreadsheetId,
       });
     } catch (testErr: any) {
-      const rawError = testErr.message || "Failed to connect to Google Sheets";
-      let userFriendlyError = rawError;
+      const httpStatus =
+        testErr.status ||
+        testErr.code ||
+        testErr.response?.status ||
+        500;
+      const googleMessage =
+        testErr.response?.data?.error?.message ||
+        testErr.message ||
+        "Failed to connect to Google Sheets";
 
-      if (rawError.includes("403") || rawError.includes("permission") || rawError.includes("caller does not have permission")) {
-        userFriendlyError = `Access denied (403): Please share this Google Sheet with your service account email: "${serviceAccountEmail}" as a Viewer.`;
-      } else if (rawError.includes("404") || rawError.includes("not found")) {
-        userFriendlyError = `Spreadsheet not found (404): Please check that the URL or ID "${targetSpreadsheetId}" is correct and the file has not been deleted.`;
+      const is404 =
+        httpStatus === 404 ||
+        googleMessage.includes("404") ||
+        googleMessage.toLowerCase().includes("not found");
+      const is403 =
+        httpStatus === 403 ||
+        googleMessage.includes("403") ||
+        googleMessage.toLowerCase().includes("permission") ||
+        googleMessage.toLowerCase().includes("caller does not have permission");
+
+      let userFriendlyError = googleMessage;
+      let guidance = "";
+
+      if (is404) {
+        userFriendlyError = `Spreadsheet not found (404) for ID [${maskedSpreadsheetId}].`;
+        guidance = serviceAccountEmail
+          ? `Verify that the spreadsheet exists AND is shared with service account: "${serviceAccountEmail}" as Viewer. (Google returns 404 for unshared files). Ensure Google Sheets API is enabled in project "${projectId || "configured project"}".`
+          : `Please check that spreadsheet ID "${maskedSpreadsheetId}" is correct and the file exists.`;
+      } else if (is403) {
+        userFriendlyError = `Access denied (403): Service account does not have permission for spreadsheet [${maskedSpreadsheetId}].`;
+        guidance = serviceAccountEmail
+          ? `Please share the Google Sheet with "${serviceAccountEmail}" as Viewer.`
+          : `Please verify service account permissions.`;
       }
+
+      const fullErrorMessage = guidance
+        ? `${userFriendlyError} ${guidance}`
+        : userFriendlyError;
 
       if (sourceDoc) {
         sourceDoc.status = "Error";
-        sourceDoc.lastError = userFriendlyError;
+        sourceDoc.lastError = fullErrorMessage;
         sourceDoc.lastTestedAt = new Date();
         await sourceDoc.save();
       }
@@ -96,9 +152,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: userFriendlyError,
-          rawError,
+          error: fullErrorMessage,
+          status: httpStatus,
+          googleMessage,
+          maskedSpreadsheetId,
           serviceAccountEmail,
+          projectId,
+          guidance,
         },
         { status: 400 }
       );

@@ -3,7 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import SheetSource from "@/models/SheetSource";
 import Applicant from "@/models/Applicant";
-import { extractSpreadsheetId, getServiceAccountEmail } from "@/lib/googleSheets";
+import { extractSpreadsheetId, getServiceAccountEmail, getServiceAccountProjectId } from "@/lib/googleSheets";
 import { getActiveEventId } from "@/lib/activeEvent";
 
 // Seed default sheet from environment variable if missing
@@ -66,12 +66,14 @@ export async function GET() {
     }));
 
     const serviceAccountEmail = getServiceAccountEmail();
+    const projectId = getServiceAccountProjectId();
 
     return NextResponse.json({
       success: true,
       activeEventId,
       sources: sourcesWithCounts,
       serviceAccountEmail,
+      projectId,
     });
   } catch (error: any) {
     console.error("GET /api/admin/sheets Error:", error);

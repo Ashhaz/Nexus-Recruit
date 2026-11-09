@@ -140,6 +140,7 @@ export default function AdminSettingsPage() {
   const [sheetSources, setSheetSources] = useState<SheetSourceData[]>([]);
   const [sheetsLoading, setSheetsLoading] = useState(true);
   const [serviceAccountEmail, setServiceAccountEmail] = useState("");
+  const [serviceAccountProjectId, setServiceAccountProjectId] = useState("");
   const [testingSheetId, setTestingSheetId] = useState<string | null>(null);
   const [loadingSheetId, setLoadingSheetId] = useState<string | null>(null);
 
@@ -242,6 +243,9 @@ export default function AdminSettingsPage() {
         setSheetSources(json.sources);
         if (json.serviceAccountEmail) {
           setServiceAccountEmail(json.serviceAccountEmail);
+        }
+        if (json.projectId) {
+          setServiceAccountProjectId(json.projectId);
         }
       }
     } catch {
@@ -650,7 +654,7 @@ export default function AdminSettingsPage() {
         throw new Error(json.error || "Connection test failed.");
       }
       showToast(
-        `Connected to "${json.title}"! Found ${json.sheets.length} worksheet(s), ~${json.totalDataRows} rows.`,
+        `Connected to "${json.title}"! Found ${json.sheets?.length || 0} worksheet(s), ~${json.totalDataRows || 0} rows. Service account: ${json.serviceAccountEmail}`,
         "success"
       );
       await loadSheetSources();
@@ -1829,6 +1833,11 @@ export default function AdminSettingsPage() {
                     <p className="font-mono text-xs text-[#00FF66] break-all select-all mt-1.5 font-bold">
                       {serviceAccountEmail}
                     </p>
+                    {serviceAccountProjectId && (
+                      <p className="text-[10px] text-[#8A938D] mt-1 font-mono">
+                        Google Cloud Project: <span className="text-[#F5F5F5] font-semibold">{serviceAccountProjectId}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
                 <button
@@ -2005,10 +2014,10 @@ export default function AdminSettingsPage() {
 
                       {/* Error Banner if applicable */}
                       {source.lastError && (
-                        <p className="text-[11px] text-[#FF4D4D] bg-[#FF4D4D]/10 border border-[#FF4D4D]/25 rounded-xl p-3 flex items-start gap-2">
-                          <span className="material-symbols-outlined text-sm mt-0.5">error</span>
-                          <span>{source.lastError}</span>
-                        </p>
+                        <div className="text-[11px] text-[#FF4D4D] bg-[#FF4D4D]/10 border border-[#FF4D4D]/25 rounded-xl p-3 flex items-start gap-2.5">
+                          <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">error</span>
+                          <span className="leading-relaxed break-words">{source.lastError}</span>
+                        </div>
                       )}
 
                       {/* Actions Toolbar */}

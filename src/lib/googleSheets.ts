@@ -3,16 +3,82 @@ import fs from "fs";
 import path from "path";
 
 /**
- * Extracts a Google Spreadsheet ID from either a full URL or a raw ID string.
+ * Extracts a Google Spreadsheet ID from various Google Sheets / Drive URLs or raw ID strings.
+ * Handles standard URLs, multi-account URLs (/u/0/, /u/1/), Drive URLs, query parameters,
+ * hash fragments, trailing edit/view paths, and raw IDs with extraneous whitespace.
  */
 export function extractSpreadsheetId(input: string): string {
   if (!input) return "";
-  const trimmed = input.trim();
-  const urlMatch = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-  if (urlMatch && urlMatch[1]) {
-    return urlMatch[1];
+  let trimmed = input.trim();
+
+  // Strip surrounding quotes if present
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    trimmed = trimmed.slice(1, -1).trim();
   }
+
+  // 1. Matches /spreadsheets/.../d/<ID> or /file/d/<ID> or /d/<ID>
+  const dMatch = trimmed.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (dMatch && dMatch[1]) {
+    return dMatch[1];
+  }
+
+  // 2. Matches ?id=<ID> or &id=<ID> (Google Drive open links)
+  const idParamMatch = trimmed.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+  if (idParamMatch && idParamMatch[1]) {
+    return idParamMatch[1];
+  }
+
+  // 3. Strip URL scheme and domain if any
+  trimmed = trimmed.replace(/^https?:\/\/[^/]+/i, "");
+
+  // 4. Strip query parameters (?...) and hash fragments (#...)
+  trimmed = trimmed.split("?")[0].split("#")[0];
+
+  // 5. Strip common path suffixes like /edit, /view, /preview, /pubhtml, /htmlview, /copy, etc.
+  trimmed = trimmed.replace(/\/(?:edit|view|preview|pubhtml|pub|htmlview|copy|export).*$/i, "");
+
+  // 6. Strip leading and trailing slashes
+  trimmed = trimmed.replace(/^\/+|\/+$/g, "").trim();
+
+  // 7. Direct ID check: Must be alphanumeric + hyphens/underscores, not a numeric gid
+  const directMatch = trimmed.match(/^([a-zA-Z0-9-_]+)$/);
+  if (directMatch && directMatch[1]) {
+    const val = directMatch[1];
+    // Reject pure numbers < 20 chars (common for gid=1107616443)
+    if (/^\d+$/.test(val) && val.length < 20) {
+      return "";
+    }
+    return val;
+  }
+
   return trimmed;
+}
+
+/**
+ * Safely masks a spreadsheet ID for display in diagnostics and logs (e.g. 1Gt1Ud...AvJA).
+ */
+export function maskSpreadsheetId(id: string): string {
+  if (!id) return "";
+  const clean = id.trim();
+  if (clean.length <= 10) return clean;
+  return `${clean.slice(0, 6)}...${clean.slice(-4)}`;
+}
+
+/**
+ * Safely formats a worksheet name and range in standard Google Sheets A1 notation.
+ * Properly wraps worksheet names containing spaces or special characters in single quotes
+ * and escapes any embedded single quotes.
+ */
+export function formatSheetRange(sheetName: string, range?: string): string {
+  const cleanSheet = sheetName.replace(/^'|'$/g, "").replace(/''/g, "'");
+  const safeSheet = `'${cleanSheet.replace(/'/g, "''")}'`;
+  if (!range || !range.trim()) {
+    return safeSheet;
+  }
+  return `${safeSheet}!${range.trim()}`;
 }
 
 /**
@@ -29,7 +95,7 @@ export interface ServiceAccountCredentials {
   token_uri?: string;
   auth_provider_x509_cert_url?: string;
   client_x509_cert_url?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -47,11 +113,21 @@ export function getServiceAccountCredentials(): ServiceAccountCredentials {
     );
   }
 
-  // Format 1: Vercel deployment (JSON string beginning with '{')
-  if (rawValue.startsWith("{")) {
-    let parsed: any;
+  let cleanedValue = rawValue;
+  // Handle JSON string wrapped in outer quotes (sometimes introduced when pasting env vars)
+  if (cleanedValue.startsWith('"') && cleanedValue.endsWith('"')) {
     try {
-      parsed = JSON.parse(rawValue);
+      cleanedValue = JSON.parse(cleanedValue);
+    } catch {
+      cleanedValue = cleanedValue.slice(1, -1).trim();
+    }
+  }
+
+  // Format 1: Vercel deployment (JSON string beginning with '{')
+  if (typeof cleanedValue === "string" && cleanedValue.startsWith("{")) {
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(cleanedValue);
       if (typeof parsed === "string") {
         parsed = JSON.parse(parsed);
       }
@@ -100,12 +176,13 @@ export function getServiceAccountCredentials(): ServiceAccountCredentials {
     }
 
     return parsed as ServiceAccountCredentials;
-  } catch (err: any) {
-    if (err.message && err.message.includes("Invalid credentials file")) {
+  } catch (err: unknown) {
+    const errMessage = err instanceof Error ? err.message : String(err);
+    if (errMessage.includes("Invalid credentials file")) {
       throw err;
     }
     throw new Error(
-      `Failed to read or parse Google service account file at "${rawValue}": ${err.message}`
+      `Failed to read or parse Google service account file at "${rawValue}": ${errMessage}`
     );
   }
 }
@@ -117,8 +194,21 @@ export function getServiceAccountEmail(): string {
   try {
     const credentials = getServiceAccountCredentials();
     return credentials.client_email || "";
-  } catch (e: any) {
-    console.warn("Could not read service account email:", e.message);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.warn("Could not read service account email:", message);
+    return "";
+  }
+}
+
+/**
+ * Reads the project_id from the configured service account credentials.
+ */
+export function getServiceAccountProjectId(): string {
+  try {
+    const credentials = getServiceAccountCredentials();
+    return credentials.project_id || "";
+  } catch {
     return "";
   }
 }
@@ -146,8 +236,13 @@ export interface SheetMetadata {
  * Retrieves metadata for a spreadsheet (spreadsheet title and all tab/worksheet names).
  */
 export async function getSpreadsheetMetadata(spreadsheetId: string): Promise<SheetMetadata> {
+  const cleanId = extractSpreadsheetId(spreadsheetId);
+  if (!cleanId) {
+    throw new Error("Invalid Google Spreadsheet ID provided.");
+  }
+
   const sheets = getGoogleSheetsClient();
-  const res = await sheets.spreadsheets.get({ spreadsheetId });
+  const res = await sheets.spreadsheets.get({ spreadsheetId: cleanId });
   const title = res.data.properties?.title || "Untitled Spreadsheet";
   const sheetTitles = (res.data.sheets || [])
     .map((s) => s.properties?.title)
@@ -174,10 +269,15 @@ export async function fetchSheetRows(options: FetchSheetOptions): Promise<{
   totalRows: number;
 }> {
   const { spreadsheetId, sheetName, range, limit } = options;
+  const cleanSpreadsheetId = extractSpreadsheetId(spreadsheetId);
+  if (!cleanSpreadsheetId) {
+    throw new Error("Invalid Google Spreadsheet ID provided.");
+  }
+
   const sheets = getGoogleSheetsClient();
 
   // Retrieve metadata to ensure sheet exists and identify target worksheet
-  const metadata = await getSpreadsheetMetadata(spreadsheetId);
+  const metadata = await getSpreadsheetMetadata(cleanSpreadsheetId);
   const targetSheet = sheetName && metadata.sheets.includes(sheetName)
     ? sheetName
     : metadata.sheets[0];
@@ -186,11 +286,11 @@ export async function fetchSheetRows(options: FetchSheetOptions): Promise<{
     throw new Error("No worksheets found in the provided Google Spreadsheet.");
   }
 
-  // Construct query range: e.g. "Sheet1" or "Sheet1!A:Z"
-  const fetchRange = range ? `${targetSheet}!${range}` : targetSheet;
+  // Safely format range using single-quoted sheet name
+  const fetchRange = formatSheetRange(targetSheet, range);
 
   const response = await sheets.spreadsheets.values.get({
-    spreadsheetId,
+    spreadsheetId: cleanSpreadsheetId,
     range: fetchRange,
   });
 
