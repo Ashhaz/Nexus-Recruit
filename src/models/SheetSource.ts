@@ -16,6 +16,7 @@ export interface ISheetSource extends Document {
     imported: number;
     updated: number;
     skipped: number;
+    failed?: number;
   } | null;
   applicantCount?: number;
   isDefault?: boolean;
@@ -45,6 +46,7 @@ const SheetSourceSchema: Schema = new Schema(
       imported: { type: Number, default: 0 },
       updated: { type: Number, default: 0 },
       skipped: { type: Number, default: 0 },
+      failed: { type: Number, default: 0 },
     },
     applicantCount: { type: Number, default: 0 },
     isDefault: { type: Boolean, default: false },

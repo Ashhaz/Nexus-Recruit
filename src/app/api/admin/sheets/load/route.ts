@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import SheetSource from "@/models/SheetSource";
-import Applicant from "@/models/Applicant";
-import { fetchSheetRows, mapRowToApplicantData } from "@/lib/googleSheets";
+import { importSheetSourceRows } from "@/lib/sheetImport";
 
 export async function POST(request: Request) {
   try {
@@ -42,125 +41,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch all rows from spreadsheet
-    const sheetResult = await fetchSheetRows({
-      spreadsheetId: source.spreadsheetId,
-      sheetName: source.sheetName,
-      range: source.range,
-    });
-
-    const dataRows = sheetResult.rows;
-    let imported = 0;
-    let updated = 0;
-    let skipped = 0;
-    const skippedDetails: { rowNumber: number; reason: string; name?: string }[] = [];
-
-    for (let i = 0; i < dataRows.length; i++) {
-      const row = dataRows[i];
-      const parsed = mapRowToApplicantData(row);
-
-      // Roll number is the unique identity rule across NEXUS
-      if (!parsed.rollNumber) {
-        skipped++;
-        if (skippedDetails.length < 15) {
-          skippedDetails.push({
-            rowNumber: i + 2, // 1-indexed accounting for header row
-            reason: "Missing Roll Number / Student Identifier",
-            name: parsed.name !== "Unknown" ? parsed.name : undefined,
-          });
-        }
-        continue;
-      }
-
-      // Check if applicant already exists in database for THIS specific event
-      const existing = await Applicant.findOne({
-        eventId: String(source._id),
-        rollNumber: parsed.rollNumber,
-      });
-
-      if (existing) {
-        // Safe update: update registration information but PRESERVE interview progress
-        await Applicant.updateOne(
-          { eventId: String(source._id), rollNumber: parsed.rollNumber },
-          {
-            $set: {
-              name: parsed.name !== "Unknown" ? parsed.name : existing.name,
-              email: parsed.email || existing.email,
-              phone: parsed.phone || existing.phone,
-              department: parsed.department || existing.department,
-              branch: parsed.branch || existing.branch,
-              year: parsed.year || existing.year,
-              teamApplied: parsed.teamApplied || existing.teamApplied,
-              source: source.name,
-              sourceId: String(source._id),
-              eventId: String(source._id),
-              responses: parsed.sanitizedResponses,
-              // Strictly PRESERVE:
-              // interviewStatus, assignedRoom, assignedInterviewer,
-              // interviewDuration, finalDecision, interviewNotes, evaluation
-            },
-          }
-        );
-        updated++;
-      } else {
-        // Safe insert: new applicant starts in "Waiting" status
-        await Applicant.create({
-          name: parsed.name,
-          rollNumber: parsed.rollNumber,
-          email: parsed.email,
-          phone: parsed.phone,
-          department: parsed.department,
-          branch: parsed.branch,
-          year: parsed.year,
-          teamApplied: parsed.teamApplied,
-          source: source.name,
-          sourceId: String(source._id),
-          eventId: String(source._id),
-          responses: parsed.sanitizedResponses,
-          interviewStatus: "Waiting",
-          assignedRoom: null,
-          assignedInterviewer: "",
-          interviewDuration: 0,
-          finalDecision: "",
-          interviewNotes: "",
-          evaluation: {
-            technical: null,
-            communication: null,
-            confidence: null,
-            leadership: null,
-            teamwork: null,
-          },
-        });
-        imported++;
-      }
-    }
-
-    // Update applicant count for this event
-    const applicantCount = await Applicant.countDocuments({ eventId: String(source._id) });
-    source.applicantCount = applicantCount;
-
-    // Persist sync metadata on the source document
-    source.status = "Connected";
-    source.lastError = null;
-    source.lastLoadedAt = new Date();
-    source.lastImportStats = {
-      totalRows: dataRows.length,
-      imported,
-      updated,
-      skipped,
-    };
-    await source.save();
+    const result = await importSheetSourceRows(source);
 
     return NextResponse.json({
       success: true,
       sourceName: source.name,
-      totalRows: dataRows.length,
-      imported,
-      updated,
-      skipped,
-      applicantCount,
-      skippedReasons: skippedDetails,
-      message: `Data load complete for "${source.name}": ${imported} inserted, ${updated} updated, ${skipped} skipped.`,
+      totalRows: result.totalRows,
+      imported: result.imported,
+      updated: result.updated,
+      skipped: result.skipped,
+      failed: result.failed,
+      applicantCount: result.applicantCount,
+      skippedReasons: result.skippedDetails,
+      failedReasons: result.failedDetails,
+      message: `Data load complete for "${source.name}": ${result.imported} inserted, ${result.updated} updated, ${result.skipped} skipped${result.failed ? `, ${result.failed} failed` : ""}.`,
     });
   } catch (error: any) {
     console.error("POST /api/admin/sheets/load Error:", error);

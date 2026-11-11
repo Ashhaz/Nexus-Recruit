@@ -64,6 +64,7 @@ interface SheetSourceData {
     imported: number;
     updated: number;
     skipped: number;
+    failed?: number;
   } | null;
   applicantCount?: number;
   isDefault?: boolean;
@@ -754,8 +755,8 @@ export default function AdminSettingsPage() {
         throw new Error(json.error || "Failed to load data from spreadsheet.");
       }
       showToast(
-        `Load Complete for "${sourceName}":\nImported: ${json.imported} · Updated: ${json.updated} · Skipped: ${json.skipped}`,
-        "success"
+        `Load Complete for "${sourceName}":\nImported: ${json.imported} · Updated: ${json.updated} · Skipped: ${json.skipped}${json.failed ? ` · Failed: ${json.failed}` : ""}`,
+        json.failed ? "error" : "success"
       );
       if (previewData?.sourceId === sourceId) {
         setPreviewData(null);
@@ -2048,6 +2049,12 @@ export default function AdminSettingsPage() {
                             <span className="text-[#F5F5F5]">{source.lastImportStats.updated} updated</span>
                             <span>·</span>
                             <span className="text-[#8A938D]">{source.lastImportStats.skipped} skipped</span>
+                            {(source.lastImportStats.failed ?? 0) > 0 && (
+                              <>
+                                <span>·</span>
+                                <span className="text-[#FF4D4D]">{source.lastImportStats.failed} failed</span>
+                              </>
+                            )}
                           </span>
                         )}
                       </div>

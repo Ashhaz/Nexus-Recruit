@@ -3,7 +3,8 @@ import { getAuthSession } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
 import SheetSource from "@/models/SheetSource";
-import { fetchSheetRows, mapRowToApplicantData, getApplicantsFromGoogleSheet } from "@/lib/googleSheets";
+import { mapRowToApplicantData, getApplicantsFromGoogleSheet } from "@/lib/googleSheets";
+import { importSheetSourceRows } from "@/lib/sheetImport";
 
 export async function POST(request: Request) {
   try {
@@ -37,93 +38,16 @@ export async function POST(request: Request) {
     let totalImported = 0;
     let totalUpdated = 0;
     let totalSkipped = 0;
+    let totalFailed = 0;
 
     if (activeSources.length > 0) {
       for (const source of activeSources) {
         try {
-          const sheetResult = await fetchSheetRows({
-            spreadsheetId: source.spreadsheetId,
-            sheetName: source.sheetName,
-            range: source.range,
-          });
-
-          let srcImported = 0;
-          let srcUpdated = 0;
-          let srcSkipped = 0;
-
-          for (const row of sheetResult.rows) {
-            const parsed = mapRowToApplicantData(row);
-            if (!parsed.rollNumber) {
-              srcSkipped++;
-              continue;
-            }
-
-            const existing = await Applicant.findOne({
-              eventId: String(source._id),
-              rollNumber: parsed.rollNumber,
-            });
-
-            if (existing) {
-              await Applicant.updateOne(
-                { eventId: String(source._id), rollNumber: parsed.rollNumber },
-                {
-                  $set: {
-                    name: parsed.name !== "Unknown" ? parsed.name : existing.name,
-                    email: parsed.email || existing.email,
-                    phone: parsed.phone || existing.phone,
-                    department: parsed.department || existing.department,
-                    branch: parsed.branch || existing.branch,
-                    year: parsed.year || existing.year,
-                    teamApplied: parsed.teamApplied || existing.teamApplied,
-                    source: source.name,
-                    sourceId: String(source._id),
-                    eventId: String(source._id),
-                    responses: parsed.sanitizedResponses,
-                  },
-                }
-              );
-              srcUpdated++;
-            } else {
-              await Applicant.create({
-                name: parsed.name,
-                rollNumber: parsed.rollNumber,
-                email: parsed.email,
-                phone: parsed.phone,
-                department: parsed.department,
-                branch: parsed.branch,
-                year: parsed.year,
-                teamApplied: parsed.teamApplied,
-                source: source.name,
-                sourceId: String(source._id),
-                eventId: String(source._id),
-                responses: parsed.sanitizedResponses,
-                interviewStatus: "Waiting",
-                assignedRoom: null,
-                assignedInterviewer: "",
-                interviewDuration: 0,
-                finalDecision: "",
-                interviewNotes: "",
-              });
-              srcImported++;
-            }
-          }
-
-          const count = await Applicant.countDocuments({ eventId: String(source._id) });
-          source.applicantCount = count;
-          source.status = "Connected";
-          source.lastError = null;
-          source.lastLoadedAt = new Date();
-          source.lastImportStats = {
-            totalRows: sheetResult.rows.length,
-            imported: srcImported,
-            updated: srcUpdated,
-            skipped: srcSkipped,
-          };
-          await source.save();
-
-          totalImported += srcImported;
-          totalUpdated += srcUpdated;
-          totalSkipped += srcSkipped;
+          const result = await importSheetSourceRows(source);
+          totalImported += result.imported;
+          totalUpdated += result.updated;
+          totalSkipped += result.skipped;
+          totalFailed += result.failed;
         } catch (sourceErr: any) {
           console.error(`Error syncing source "${source.name}":`, sourceErr);
           source.status = "Error";
@@ -185,6 +109,7 @@ export async function POST(request: Request) {
       imported: totalImported,
       updated: totalUpdated,
       skipped: totalSkipped,
+      failed: totalFailed,
     });
   } catch (error: any) {
     console.error("POST /api/applicants/sync Error:", error);

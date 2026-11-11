@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import SheetSource from "@/models/SheetSource";
-import { fetchSheetRows, extractField } from "@/lib/googleSheets";
+import { fetchSheetRows, findHeaderKey } from "@/lib/googleSheets";
 
 export async function POST(request: Request) {
   try {
@@ -43,16 +43,16 @@ export async function POST(request: Request) {
       limit: previewLimit,
     });
 
-    // Detect column mappings for feedback
-    const sampleRow = result.rows[0] || {};
+    // Detect column mappings for feedback using the exact same word-boundary matcher as import
+    const headers = result.headers || Object.keys(result.rows[0] || {});
     const detectedMappings: Record<string, string> = {
-      name: Object.keys(sampleRow).find((k) => k.toLowerCase().includes("name")) || "Not detected",
-      rollNumber: Object.keys(sampleRow).find((k) => k.toLowerCase().includes("roll")) || "Not detected",
-      email: Object.keys(sampleRow).find((k) => k.toLowerCase().includes("mail")) || "Not detected",
-      phone: Object.keys(sampleRow).find((k) => k.toLowerCase().includes("contact") || k.toLowerCase().includes("phone")) || "Not detected",
-      branch: Object.keys(sampleRow).find((k) => k.toLowerCase().includes("branch")) || "Not detected",
-      year: Object.keys(sampleRow).find((k) => k.toLowerCase().includes("year")) || "Not detected",
-      team: Object.keys(sampleRow).find((k) => k.toLowerCase().includes("team") || k.toLowerCase().includes("domain")) || "Optional / Not detected",
+      name: findHeaderKey(headers, [["full", "name"], ["name"]]) || "Not detected",
+      rollNumber: findHeaderKey(headers, [["roll", "number"], ["roll", "no"], ["roll"]]) || "Not detected",
+      email: findHeaderKey(headers, [["mail"]]) || "Not detected",
+      phone: findHeaderKey(headers, [["contact"], ["phone"], ["mobile"]]) || "Not detected",
+      branch: findHeaderKey(headers, [["branch"], ["department"]]) || "Not detected",
+      year: findHeaderKey(headers, [["year"]]) || "Not detected",
+      team: findHeaderKey(headers, [["team"], ["domain"]]) || "Optional / Not detected",
     };
 
     return NextResponse.json({

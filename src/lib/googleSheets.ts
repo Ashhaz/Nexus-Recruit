@@ -368,28 +368,59 @@ export async function fetchSheetRows(options: FetchSheetOptions): Promise<{
   };
 }
 
+function matchesWordKeyword(header: string, kw: string): boolean {
+  const escaped = kw.toLowerCase().trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (!escaped) return true;
+  if (escaped === "roll") {
+    return /(?:^|[^a-z0-9])roll(?:$|[^a-z0-9]|no\b|num|number\b|id\b)/i.test(header);
+  }
+  if (escaped === "mail") {
+    return /(?:^|[^a-z0-9])e?-?mail(?:$|[^a-z0-9])/i.test(header);
+  }
+  return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`, "i").test(header);
+}
+
 /**
- * Heuristically extracts a field from a row by checking if all given keywords match any header key.
+ * Finds the first header key matching any of the prioritized keyword groups using word-boundary rules.
+ */
+export function findHeaderKey(headers: string[], keywordGroups: string[][]): string | undefined {
+  for (const keywords of keywordGroups) {
+    const match = headers.find((key) => keywords.every((kw) => matchesWordKeyword(key, kw)));
+    if (match) return match;
+  }
+  return undefined;
+}
+
+/**
+ * Heuristically extracts a field from a row by checking word-boundary keyword matches across headers.
+ * Checks all matching columns and returns the first non-empty value.
  */
 export function extractField(row: Record<string, string>, keywords: string[]): string {
-  for (const key of Object.keys(row)) {
-    const lower = key.toLowerCase();
-    if (keywords.every((kw) => lower.includes(kw))) {
-      return row[key] || "";
+  const keys = Object.keys(row);
+  let fallback = "";
+  for (const key of keys) {
+    if (keywords.every((kw) => matchesWordKeyword(key, kw))) {
+      const val = (row[key] ?? "").trim();
+      if (val) return val;
+      if (!fallback) fallback = val;
     }
   }
-  return "";
+  return fallback;
 }
 
 /**
  * Maps a generic spreadsheet row object to standard Applicant attributes.
  */
 export function mapRowToApplicantData(row: Record<string, string>) {
-  const name = extractField(row, ["name"]) || "Unknown";
-  const rollNumber = extractField(row, ["roll"]);
+  const name = extractField(row, ["full", "name"]) || extractField(row, ["name"]) || "Unknown";
+  const rollNumber = (
+    extractField(row, ["roll", "number"]) ||
+    extractField(row, ["roll", "no"]) ||
+    extractField(row, ["roll"])
+  ).trim();
   const email = extractField(row, ["mail"]);
-  const phone = extractField(row, ["contact"]) || extractField(row, ["phone"]);
-  const branch = extractField(row, ["branch"]);
+  const phone = extractField(row, ["contact"]) || extractField(row, ["phone"]) || extractField(row, ["mobile"]);
+  const branch = extractField(row, ["branch"]) || extractField(row, ["department"]);
   const year = extractField(row, ["year"]);
   const department = branch;
   const teamApplied = extractField(row, ["team"]) || extractField(row, ["domain"]);
