@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
+import InterviewSession from "@/models/InterviewSession";
 import Applicant from "@/models/Applicant";
 import { getAuthSession } from "@/lib/auth";
 import { getActiveEventSource } from "@/lib/activeEvent";
+import { detectApplicantPath } from "@/lib/dimensions";
 
 export async function GET(request: Request) {
   try {
@@ -69,6 +72,34 @@ export async function GET(request: Request) {
       });
     }
 
+    let sessionId = (room as any).interviewSessionId;
+    if (!sessionId && room.applicant) {
+      const generatedId = crypto.randomUUID();
+      const updated = await InterviewRoom.findOneAndUpdate(
+        {
+          _id: room._id,
+          applicant: room.applicant,
+          $or: [{ interviewSessionId: null }, { interviewSessionId: "" }],
+        },
+        { $set: { interviewSessionId: generatedId } },
+        { new: true }
+      );
+      sessionId = updated?.interviewSessionId || generatedId;
+      try {
+        await InterviewSession.create({
+          sessionId,
+          applicantId: room.applicant,
+          roomNumber: room.roomNumber,
+          eventId: room.eventId || (activeEvent ? String(activeEvent._id) : ""),
+          interviewerId: room.interviewerId || session.interviewerId || "",
+          interviewerName: room.interviewer || session.interviewerName || "",
+          clerkUserId: session.clerkUserId || "",
+          status: "active",
+          startedAt: room.startedAt || new Date(),
+        });
+      } catch (_) {}
+    }
+
     const applicant = await Applicant.findById(room.applicant).lean();
     if (!applicant) {
       return NextResponse.json(
@@ -84,6 +115,7 @@ export async function GET(request: Request) {
         roomNumber: room.roomNumber,
         interviewerId: room.interviewerId ?? "",
         interviewer: room.interviewer ?? "",
+        interviewSessionId: sessionId ?? null,
         status: room.status,
         startedAt: room.startedAt ?? null,
         pausedAt: room.pausedAt ?? null,
@@ -98,6 +130,9 @@ export async function GET(request: Request) {
         year: (applicant as any).year ?? null,
         email: (applicant as any).email ?? null,
         phone: (applicant as any).phone ?? null,
+        appliedPath: (applicant as any).appliedPath || detectApplicantPath((applicant as any).responses) || null,
+        criteriaEvaluation: (applicant as any).criteriaEvaluation ?? null,
+        dimensionEvaluation: (applicant as any).dimensionEvaluation ?? null,
         responses: (applicant as any).responses ?? {},
         interviewDuration: (applicant as any).interviewDuration ?? 0,
         interviewNotes: (applicant as any).interviewNotes ?? "",

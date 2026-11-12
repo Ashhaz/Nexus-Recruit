@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import fs from "fs";
 import path from "path";
+import { detectApplicantPath } from "@/lib/dimensions";
 
 /**
  * Extracts a Google Spreadsheet ID from various Google Sheets / Drive URLs or raw ID strings.
@@ -424,6 +425,7 @@ export function mapRowToApplicantData(row: Record<string, string>) {
   const year = extractField(row, ["year"]);
   const department = branch;
   const teamApplied = extractField(row, ["team"]) || extractField(row, ["domain"]);
+  const appliedPath = detectApplicantPath(row) || null;
 
   // Sanitize Google Form question titles (MongoDB Map keys cannot contain "." or "$")
   const sanitizedResponses: Record<string, string> = {};
@@ -441,6 +443,7 @@ export function mapRowToApplicantData(row: Record<string, string>) {
     branch,
     year,
     teamApplied,
+    appliedPath,
     sanitizedResponses,
   };
 }

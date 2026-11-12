@@ -10,6 +10,8 @@ export interface IInterviewRoom extends Document {
   applicant: Types.ObjectId | null;
   status: "Available" | "Occupied";
   isActive: boolean;
+  interviewSessionId?: string | null;
+  eventId?: string;
   startedAt: Date | null;
   pausedAt: Date | null;
   accumulatedTime: number;
@@ -32,6 +34,8 @@ const InterviewRoomSchema: Schema = new Schema(
       default: "Available",
     },
     isActive: { type: Boolean, default: true },
+    interviewSessionId: { type: String, default: null },
+    eventId: { type: String, default: "" },
     startedAt: { type: Date, default: null },
     pausedAt: { type: Date, default: null },
     accumulatedTime: { type: Number, default: 0 },
@@ -41,7 +45,12 @@ const InterviewRoomSchema: Schema = new Schema(
   }
 );
 
-if (mongoose.models.InterviewRoom && (!mongoose.models.InterviewRoom.schema.paths.pausedAt || !mongoose.models.InterviewRoom.schema.paths.isActive)) {
+if (
+  mongoose.models.InterviewRoom &&
+  (!mongoose.models.InterviewRoom.schema.paths.pausedAt ||
+    !mongoose.models.InterviewRoom.schema.paths.isActive ||
+    !mongoose.models.InterviewRoom.schema.paths.interviewSessionId)
+) {
   delete mongoose.models.InterviewRoom;
 }
 

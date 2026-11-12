@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
+import InterviewSession from "@/models/InterviewSession";
 import Applicant from "@/models/Applicant";
 import { getAuthSession } from "@/lib/auth";
 
@@ -45,6 +47,22 @@ export async function POST(request: Request) {
     room.pausedAt = null;
     room.accumulatedTime = 0;
     room.status = "Occupied";
+    if (!room.interviewSessionId && room.applicant) {
+      room.interviewSessionId = crypto.randomUUID();
+      try {
+        await InterviewSession.create({
+          sessionId: room.interviewSessionId,
+          applicantId: room.applicant,
+          roomNumber: room.roomNumber,
+          eventId: room.eventId || "",
+          interviewerId: room.interviewerId || session.interviewerId || "",
+          interviewerName: room.interviewer || session.interviewerName || "",
+          clerkUserId: session.clerkUserId || "",
+          status: "active",
+          startedAt: room.startedAt,
+        });
+      } catch (_) {}
+    }
     await room.save();
 
     if (room.applicant) {

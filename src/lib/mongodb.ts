@@ -7,11 +7,6 @@ const execAsync = promisify(exec);
 const resolveSrv = promisify(dns.resolveSrv);
 const resolveTxt = promisify(dns.resolveTxt);
 
-const rawUri = process.env.MONGODB_URI || "";
-if (!rawUri) {
-  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
-}
-
 let cached = (global as any).mongoose;
 if (!cached) {
   cached = (global as any).mongoose = { conn: null, promise: null };
@@ -71,20 +66,110 @@ async function getFallbackUri(uri: string): Promise<string> {
   return `mongodb://${credentials}${shardHosts.join(',')}/${options}`;
 }
 
+/**
+ * Safely resolves the target MongoDB database name based on strict precedence:
+ *
+ * Precedence:
+ * 1. Explicit MONGODB_DB or MONGODB_DATABASE override.
+ * 2. Explicit database path in MONGODB_URI.
+ * 3. VERCEL_ENV fallback (preview => nexus_recruit_preview, production => nexus_recruit).
+ * 4. Safe local development fallback (LOCAL_MONGODB_DB if defined, otherwise nexus_recruit_dev).
+ *
+ * Security:
+ * - Local development is prevented from connecting to the production database ("nexus_recruit")
+ *   unless ALLOW_PRODUCTION_DB=true is explicitly set.
+ * - Credentials and connection strings are never logged.
+ */
+export function resolveDatabaseName(
+  uri: string,
+  env: Partial<NodeJS.ProcessEnv> = process.env
+): string {
+  // 1. Explicit environment variable override (Highest precedence)
+  const explicitDb = env.MONGODB_DB?.trim() || env.MONGODB_DATABASE?.trim();
+  if (explicitDb) {
+    return explicitDb;
+  }
+
+  // 2. Explicit database path in MONGODB_URI
+  try {
+    const parsed = new URL(uri.replace(/^mongodb(\+srv)?:\/\//, "http://"));
+    const pathDb = parsed.pathname.replace(/^\//, "").split("/")[0].trim();
+    if (pathDb) {
+      return pathDb;
+    }
+  } catch {
+    const match = uri.match(/^mongodb(?:\+srv)?:\/\/[^/]+\/([^?]+)/);
+    if (match && match[1]?.trim()) {
+      return match[1].trim();
+    }
+  }
+
+  // 3. VERCEL_ENV deployment environment isolation
+  const vercelEnv = env.VERCEL_ENV?.trim().toLowerCase();
+  if (vercelEnv === "preview") {
+    return "nexus_recruit_preview";
+  }
+  if (vercelEnv === "production") {
+    return "nexus_recruit";
+  }
+
+  // 4. Safe local development fallback (default: nexus_recruit_dev)
+  const localDb = env.LOCAL_MONGODB_DB?.trim();
+  if (localDb) {
+    return localDb;
+  }
+
+  return "nexus_recruit_dev";
+}
+
+/**
+ * Validates that local development cannot silently connect to the production
+ * database ("nexus_recruit") without explicit opt-in (ALLOW_PRODUCTION_DB=true).
+ */
+export function validateDatabaseAccess(
+  dbName: string,
+  env: Partial<NodeJS.ProcessEnv> = process.env
+): void {
+  const isVercelProduction = env.VERCEL_ENV?.trim().toLowerCase() === "production";
+  if (dbName === "nexus_recruit" && !isVercelProduction) {
+    const allowed = env.ALLOW_PRODUCTION_DB?.trim().toLowerCase() === "true";
+    if (!allowed) {
+      throw new Error(
+        `[MongoDB] Protection Block: Local development environment is attempting to connect to production database "${dbName}". Explicit opt-in ALLOW_PRODUCTION_DB=true is required.`
+      );
+    }
+  }
+}
+
 async function connectToDatabase(retries = 3) {
   if (cached.conn) {
     return cached.conn;
   }
+
+  const rawUri = process.env.MONGODB_URI || "";
+  if (!rawUri) {
+    throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+  }
+
+  const dbName = resolveDatabaseName(rawUri, process.env);
+  if (!dbName) {
+    throw new Error(
+      "[MongoDB] Fatal: Target database could not be determined. Set MONGODB_DB or specify an explicit database in MONGODB_URI."
+    );
+  }
+
+  // Enforce local development protection against accidental production connection
+  validateDatabaseAccess(dbName, process.env);
 
   let attempt = 0;
   let activeUri = rawUri;
 
   while (attempt < retries) {
     try {
-      console.log(`[MongoDB] Connection attempt ${attempt + 1}/${retries}...`);
+      console.log(`[MongoDB] Connection attempt ${attempt + 1}/${retries} to database: "${dbName}"...`);
       const opts = {
         bufferCommands: false,
-        dbName: "nexus_recruit",
+        dbName,
         serverSelectionTimeoutMS: 5000,
         family: 4
       };

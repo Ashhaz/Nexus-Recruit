@@ -3,6 +3,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import CustomCursor from "@/components/ui/CustomCursor";
+import CandidateInfoCard from "@/components/interviewer/CandidateInfoCard";
+import DimensionEvaluationCard from "@/components/interviewer/DimensionEvaluationCard";
+import EndInterviewModal, { FinalDecision } from "@/components/interviewer/EndInterviewModal";
+import { EvaluationPathId, FinalScoreResult, CriterionEvaluationItem } from "@/lib/dimensions";
+import { EvaluationsByPath, getEvaluationDraftStorageKey, clearEvaluationDraft } from "@/lib/evaluationDrafts";
 
 interface ApplicantData {
   _id: string;
@@ -13,6 +18,9 @@ interface ApplicantData {
   year?: string;
   email?: string;
   phone?: string;
+  appliedPath?: string | null;
+  criteriaEvaluation?: any;
+  dimensionEvaluation?: any;
   responses: Record<string, string>;
   interviewDuration: number;
   interviewNotes?: string;
@@ -24,6 +32,7 @@ interface WorkspaceData {
     roomNumber: number;
     interviewerId: string;
     interviewer: string;
+    interviewSessionId?: string | null;
     status: string;
     startedAt: string | null;
     pausedAt: string | null;
@@ -72,12 +81,22 @@ export default function ActiveInterviewPage() {
 
   const [interviewerName, setInterviewerName] = useState<string>("");
   const [interviewerId, setInterviewerId] = useState<string>("");
+  const [interviewSessionId, setInterviewSessionId] = useState<string | null>(null);
 
   const [elapsed, setElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [notes, setNotes] = useState("");
+  const [activeEvaluatedPath, setActiveEvaluatedPath] = useState<EvaluationPathId | null>(null);
+  const [evaluationsByPath, setEvaluationsByPath] = useState<EvaluationsByPath | null>(null);
+  const [scoreResult, setScoreResult] = useState<FinalScoreResult | null>(null);
+
+  // End Interview modal state
+  const [isEndModalOpen, setIsEndModalOpen] = useState(false);
+  const [wasTimerRunningBeforeModal, setWasTimerRunningBeforeModal] = useState(false);
+  const [submittingEvaluation, setSubmittingEvaluation] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     const checkRole = async () => {
@@ -119,6 +138,11 @@ export default function ActiveInterviewPage() {
 
       setInterviewerName(wsData.room.interviewer ?? "");
       setInterviewerId(wsData.room.interviewerId ?? "");
+      setInterviewSessionId(wsData.room.interviewSessionId ?? null);
+      
+      if (wsData.applicant.appliedPath) {
+        setActiveEvaluatedPath(wsData.applicant.appliedPath as EvaluationPathId);
+      }
       
       if (wsData.applicant.interviewNotes) {
         setNotes(wsData.applicant.interviewNotes);
@@ -250,46 +274,97 @@ export default function ActiveInterviewPage() {
     }
   };
 
-  const [savingNotes, setSavingNotes] = useState(false);
+  const handleOpenEndInterview = async () => {
+    if (isReadOnly) return;
+    setSubmitError("");
+    const currentlyRunning = isRunning;
+    setWasTimerRunningBeforeModal(currentlyRunning);
 
-  const handleProceedToEvaluation = async () => {
-    if (savingNotes) return;
-    setIsRunning(false);
-    if (!data || !data.applicant) return;
-
-    setSavingNotes(true);
-    const applicantId = data.applicant._id;
-    const interviewer = data.room.interviewer || interviewerName || "";
-
-    // 1. Cache notes in sessionStorage so the evaluation screen has instant access
-    if (typeof window !== "undefined") {
+    if (currentlyRunning) {
       try {
-        sessionStorage.setItem(`nexus_interview_notes_${roomNumber}`, notes);
-        sessionStorage.setItem(`nexus_interview_notes_${applicantId}`, notes);
-      } catch (err) {
-        console.error("Failed to store notes in sessionStorage:", err);
+        await handlePause();
+      } catch (err: any) {
+        alert("Failed to pause interview timer: " + err.message);
+        return;
       }
     }
 
-    // 2. Persist duration and notes to MongoDB via /api/interviewer/workspace/end
+    setIsEndModalOpen(true);
+  };
+
+  const handleCancelEndInterview = async () => {
+    setIsEndModalOpen(false);
+    setSubmitError("");
+    if (wasTimerRunningBeforeModal) {
+      try {
+        await handleStartResume();
+      } catch (err) {
+        console.error("Failed to resume timer after modal cancellation:", err);
+      }
+    }
+  };
+
+  const handleSubmitFinalEvaluation = async ({
+    decision,
+    overallFeedback,
+  }: {
+    decision: FinalDecision;
+    overallFeedback: string;
+  }) => {
+    if (!data?.applicant || !roomNumber) return;
+    setSubmittingEvaluation(true);
+    setSubmitError("");
+
     try {
-      await fetch("/api/interviewer/workspace/end", {
+      const targetPath = activeEvaluatedPath || (data.applicant.appliedPath as EvaluationPathId) || "learner";
+      const pathState = evaluationsByPath ? evaluationsByPath[targetPath] : null;
+      const criteriaList = pathState?.criteria || [];
+
+      const payloadCriteria = criteriaList.map((c) => ({
+        id: c.id,
+        rating: c.rating,
+        feedback: c.feedback || "",
+      }));
+
+      const res = await fetch("/api/interviewer/workspace/end", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          applicantId,
-          duration: elapsed,
+          interviewSessionId: interviewSessionId || data.room.interviewSessionId,
+          applicantId: data.applicant._id,
+          path: targetPath,
+          criteria: payloadCriteria,
+          overallFeedback,
+          decision,
           notes,
         }),
       });
-    } catch (e: any) {
-      console.error("Failed to persist workspace end state:", e);
-    }
 
-    // 3. Navigate to evaluation page with full parameters
-    router.push(
-      `/interviewer/evaluation?room=${roomNumber}&applicantId=${applicantId}&name=${encodeURIComponent(interviewer)}`
-    );
+      const json = await res.json();
+      if (!json.success) {
+        throw new Error(json.error || "Failed to submit final evaluation.");
+      }
+
+      // Clear matching session draft
+      if (typeof window !== "undefined") {
+        const storageKey = getEvaluationDraftStorageKey({
+          applicantId: data.applicant._id,
+          interviewerId: interviewerId || data.room.interviewerId,
+          eventId: data.activeEvent?._id || "global",
+          roomNumber,
+          interviewSessionId: interviewSessionId || data.room.interviewSessionId,
+        });
+        clearEvaluationDraft(storageKey);
+      }
+
+      // Close modal and redirect to room selection page
+      setIsEndModalOpen(false);
+      router.push(`/interviewer/workspace/select?room=${roomNumber}`);
+    } catch (err: any) {
+      setSubmitError(err.message || "An unexpected error occurred during submission.");
+    } finally {
+      setSubmittingEvaluation(false);
+    }
   };
 
   if (error) {
@@ -354,32 +429,36 @@ export default function ActiveInterviewPage() {
           ) : data?.applicant ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(220px,25%)_minmax(320px,40%)_minmax(320px,35%)] gap-6 items-start">
               
-              {/* LEFT Column: Candidate Info */}
-              <section className="w-full bg-[#101412] border border-[#1D2A22] rounded-xl p-6 lg:h-[calc(100vh-12rem)] flex flex-col shadow-xl overflow-hidden">
-                <div className="flex items-center gap-2 mb-1 border-b border-[#1D2A22] pb-3">
-                  <span className="material-symbols-outlined text-[#00FF66] text-lg font-bold">person_pin</span>
-                  <h2 className="text-xs font-black text-[#F5F5F5] uppercase tracking-widest">Candidate Info</h2>
-                </div>
-                
-                <div className="mt-4">
-                  <h3 className="text-xl font-black text-[#F5F5F5] uppercase tracking-wide">{data.applicant.name}</h3>
-                  <p className="text-xs font-mono text-[#8A938D] mt-0.5">{data.applicant.rollNumber}</p>
-                </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 mt-4 space-y-4 pt-4 border-t border-[#1D2A22]/50">
-                  {[
-                    { label: "Interviewer", value: data.room.interviewer },
-                    { label: "Department", value: data.applicant.department },
-                    { label: "Branch", value: data.applicant.branch },
-                    { label: "Year", value: data.applicant.year },
-                    { label: "Email", value: data.applicant.email },
-                    { label: "Phone", value: data.applicant.phone },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex flex-col">
-                      <span className="text-[9px] uppercase tracking-widest text-[#8A938D] font-bold">{label}</span>
-                      <span className="text-sm font-semibold text-[#F5F5F5] mt-0.5">{value || "—"}</span>
-                    </div>
-                  ))}
-                </div>
+              {/* LEFT Column: Candidate Information & Dimension Evaluation */}
+              <section className="w-full flex flex-col gap-6 lg:h-[calc(100vh-12rem)] overflow-y-auto custom-scrollbar pr-1">
+                <CandidateInfoCard
+                  name={data.applicant.name}
+                  rollNumber={data.applicant.rollNumber}
+                  department={data.applicant.department}
+                  branch={data.applicant.branch}
+                  year={data.applicant.year}
+                  email={data.applicant.email}
+                  phone={data.applicant.phone}
+                  appliedPath={data.applicant.appliedPath}
+                  currentlyEvaluatedPath={activeEvaluatedPath}
+                />
+
+                <DimensionEvaluationCard
+                  applicantId={data.applicant._id}
+                  interviewerId={interviewerId || data.room.interviewerId}
+                  eventId={data.activeEvent?._id || "global"}
+                  roomNumber={roomNumber || data.room.roomNumber}
+                  interviewSessionId={interviewSessionId || data.room.interviewSessionId}
+                  appliedPath={data.applicant.appliedPath}
+                  savedCriteriaEvaluation={data.applicant.criteriaEvaluation}
+                  savedDimensionEvaluation={data.applicant.dimensionEvaluation}
+                  isReadOnly={isReadOnly}
+                  onEvaluationChange={({ currentPath, evaluationsByPath: ebPath, scoreResult: sRes }) => {
+                    setActiveEvaluatedPath(currentPath);
+                    setEvaluationsByPath(ebPath);
+                    setScoreResult(sRes);
+                  }}
+                />
               </section>
 
               {/* CENTER Column: Interview Control & Notes */}
@@ -412,22 +491,12 @@ export default function ActiveInterviewPage() {
                             </button>
                           )}
                           <button
-                            onClick={handleProceedToEvaluation}
-                            disabled={savingNotes}
-                            className="px-8 py-3 bg-[#FF4D4D] text-[#F5F5F5] hover:bg-[#D32F2F] rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(255,77,77,0.25)] disabled:opacity-50"
+                            onClick={handleOpenEndInterview}
+                            className="px-8 py-3 bg-[#FF4D4D] text-[#F5F5F5] hover:bg-[#D32F2F] rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(255,77,77,0.25)]"
                           >
                             <span className="material-symbols-outlined text-sm font-bold">stop</span> End Interview
                           </button>
                         </div>
-
-                        <button
-                          onClick={handleProceedToEvaluation}
-                          disabled={savingNotes}
-                          className="w-full mt-6 py-4 bg-[#00FF66]/10 hover:bg-[#00FF66]/20 border border-[#00FF66]/30 text-[#00FF66] rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
-                        >
-                          <span className="material-symbols-outlined text-sm font-bold">assignment_turned_in</span>
-                          {savingNotes ? "Saving & Proceeding..." : "Begin Evaluation"}
-                        </button>
                       </>
                     )}
                     {isReadOnly && (
@@ -519,6 +588,31 @@ export default function ActiveInterviewPage() {
           ) : null}
         </div>
       </main>
+
+      {data?.applicant && (
+        <EndInterviewModal
+          isOpen={isEndModalOpen}
+          onClose={handleCancelEndInterview}
+          onSubmit={handleSubmitFinalEvaluation}
+          isSubmitting={submittingEvaluation}
+          submitError={submitError}
+          applicant={{
+            name: data.applicant.name,
+            rollNumber: data.applicant.rollNumber,
+            appliedPath: data.applicant.appliedPath,
+          }}
+          interviewerName={interviewerName || data.room.interviewer}
+          roomNumber={roomNumber || data.room.roomNumber}
+          durationFormatted={formatTime(elapsed)}
+          evaluatedPath={activeEvaluatedPath}
+          criteria={
+            activeEvaluatedPath && evaluationsByPath
+              ? evaluationsByPath[activeEvaluatedPath]?.criteria || []
+              : []
+          }
+          scoreResult={scoreResult}
+        />
+      )}
 
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar {

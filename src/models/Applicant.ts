@@ -7,6 +7,46 @@ export interface IEvaluationCriterionSnapshot {
   maxScore: number;
 }
 
+export interface ICriterionEvaluationSnapshot {
+  id: string;
+  name: string;
+  description: string;
+  weight: number;
+  rating: number | null;
+  weightedScore: number;
+  feedback?: string;
+  reviewed?: boolean;
+}
+
+export interface ICriteriaEvaluationSnapshot {
+  rubricVersion: string;
+  path: string;
+  criteria: ICriterionEvaluationSnapshot[];
+  overallFeedback?: string;
+  totalWeightedScore?: number;
+  isComplete?: boolean;
+  evaluatedAt?: Date | null;
+  interviewSessionId?: string | null;
+  interviewerId?: string;
+  interviewerName?: string;
+}
+
+export interface IDimensionEvaluationCriterionSnapshot {
+  dimensionId: string;
+  name: string;
+  description: string;
+  score: number;
+  feedback?: string;
+  reviewed?: boolean;
+}
+
+export interface IDimensionEvaluationSnapshot {
+  path: string;
+  dimensions: IDimensionEvaluationCriterionSnapshot[];
+  overallFeedback?: string;
+  evaluatedAt?: Date | null;
+}
+
 export interface IApplicant extends Document {
   name: string;
   rollNumber: string;
@@ -16,6 +56,7 @@ export interface IApplicant extends Document {
   branch?: string;
   year?: string;
   teamApplied?: string;
+  appliedPath?: string | null;
   source?: string;
   eventId?: string;
   sourceId?: string;
@@ -36,10 +77,67 @@ export interface IApplicant extends Document {
     criteriaSnapshot?: IEvaluationCriterionSnapshot[];
     submittedAt?: Date;
   };
+  criteriaEvaluation?: ICriteriaEvaluationSnapshot;
+  dimensionEvaluation?: any;
   
   createdAt: Date;
   updatedAt: Date;
 }
+
+export const CriterionEvaluationItemSchema: Schema = new Schema(
+  {
+    id: { type: String, required: true, trim: true },
+    name: { type: String, required: true, trim: true },
+    description: { type: String, default: "", trim: true },
+    weight: { type: Number, required: true, min: 1, max: 100 },
+    rating: { type: Number, min: 1, max: 10, default: null },
+    weightedScore: { type: Number, default: 0, min: 0, max: 100 },
+    feedback: { type: String, default: "", trim: true },
+    reviewed: { type: Boolean, default: false },
+    dimensionId: { type: String, trim: true },
+    score: { type: Number, min: 1, max: 10 },
+  },
+  { _id: false }
+);
+
+export const CriteriaEvaluationSchema: Schema = new Schema(
+  {
+    rubricVersion: { type: String, default: "nexus-interview-v2", trim: true },
+    path: { type: String, required: true, trim: true },
+    criteria: { type: [CriterionEvaluationItemSchema], default: [] },
+    dimensions: { type: [CriterionEvaluationItemSchema], default: [] },
+    overallFeedback: { type: String, default: "", trim: true },
+    totalWeightedScore: { type: Number, default: 0 },
+    isComplete: { type: Boolean, default: false },
+    evaluatedAt: { type: Date, default: null },
+    interviewSessionId: { type: String, default: null, trim: true },
+    interviewerId: { type: String, default: "", trim: true },
+    interviewerName: { type: String, default: "", trim: true },
+  },
+  { _id: false }
+);
+
+export const DimensionEvaluationItemSchema: Schema = new Schema(
+  {
+    dimensionId: { type: String, required: true, trim: true },
+    name: { type: String, required: true, trim: true },
+    description: { type: String, default: "", trim: true },
+    score: { type: Number, required: true, min: 1, max: 10 },
+    feedback: { type: String, default: "", trim: true },
+    reviewed: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+export const DimensionEvaluationSchema: Schema = new Schema(
+  {
+    path: { type: String, required: true, trim: true },
+    dimensions: { type: [DimensionEvaluationItemSchema], default: [] },
+    overallFeedback: { type: String, default: "", trim: true },
+    evaluatedAt: { type: Date, default: null },
+  },
+  { _id: false }
+);
 
 const ApplicantSchema: Schema = new Schema(
   {
@@ -51,6 +149,7 @@ const ApplicantSchema: Schema = new Schema(
     branch: { type: String },
     year: { type: String },
     teamApplied: { type: String },
+    appliedPath: { type: String, default: null, trim: true },
     source: { type: String, default: "" },
     eventId: { type: String, default: "", index: true },
     sourceId: { type: String, default: "" },
@@ -81,6 +180,14 @@ const ApplicantSchema: Schema = new Schema(
         },
       ],
       submittedAt: { type: Date },
+    },
+    criteriaEvaluation: {
+      type: CriteriaEvaluationSchema,
+      required: false,
+    },
+    dimensionEvaluation: {
+      type: Schema.Types.Mixed,
+      required: false,
     },
   },
   {

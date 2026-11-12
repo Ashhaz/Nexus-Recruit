@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
+import mongoose from "mongoose";
 import connectToDatabase from "@/lib/mongodb";
 import InterviewRoom from "@/models/InterviewRoom";
+import InterviewSession from "@/models/InterviewSession";
 import Applicant from "@/models/Applicant";
 import { getActiveEventId } from "@/lib/activeEvent";
 import { getAuthSession } from "@/lib/auth";
@@ -42,18 +45,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Server-side identity validation: ensure caller matches the registered interviewer
-    if (
-      room.interviewer &&
-      interviewerName &&
-      room.interviewer.trim().toLowerCase() !== interviewerName.trim().toLowerCase()
-    ) {
-      return NextResponse.json(
-        { success: false, error: "YOU ARE NOT AUTHORIZED FOR THIS ROOM" },
-        { status: 403 }
-      );
-    }
-
     // Reject the start request if the room already has an active applicant
     if (room.applicant !== null) {
       return NextResponse.json(
@@ -81,46 +72,131 @@ export async function POST(request: Request) {
       );
     }
 
-    // Atomically assign the candidate only if they are Waiting and assignedRoom is null
-    const updateCondition: any = {
-      _id: applicantId,
-      interviewStatus: "Waiting",
-      $or: [
-        { assignedRoom: null },
-        { assignedRoom: { $exists: false } }
-      ]
-    };
-    if (activeEventId) {
-      updateCondition.eventId = activeEventId;
-    }
-
-    const updateResult = await Applicant.updateOne(
-      updateCondition,
-      {
-        $set: {
-          interviewStatus: "Interviewing",
-          assignedInterviewer: room.interviewer,
-          assignedRoom: room.roomNumber
-        }
-      }
-    );
-
-    if (updateResult.matchedCount === 0) {
+    // Require authenticated Clerk user identity
+    if (!session.clerkUserId) {
       return NextResponse.json(
-        { success: false, error: "CANDIDATE IS NO LONGER AVAILABLE" },
-        { status: 409 }
+        { success: false, error: "Unauthorized: Missing authenticated Clerk user identity." },
+        { status: 403 }
       );
     }
 
-    // Assign to room and start timer
-    room.applicant = applicantId;
-    room.status = "Occupied";
-    room.startedAt = new Date();
-    room.pausedAt = null;
-    room.accumulatedTime = 0;
-    await room.save();
+    // Generate unique durable interview session ID
+    const interviewSessionId = crypto.randomUUID();
+    const eventId = (candidate.eventId || activeEventId || "").trim();
+    if (!eventId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "UNAUTHORIZED: Unable to establish recruitment event association. A valid event ID is required to start an interview session.",
+        },
+        { status: 400 }
+      );
+    }
+    const storedClerkUserId = session.clerkUserId;
+    const storedInterviewerId = session.interviewerId || "";
+    const effectiveInterviewerName = session.interviewerName || session.name || "Interviewer";
+    const startTime = new Date();
 
-    return NextResponse.json({ success: true, room });
+    // Atomic session creation with MongoDB transaction
+    const mongoSession = await mongoose.startSession();
+    try {
+      mongoSession.startTransaction();
+
+      // 1. Atomically assign the candidate only if they are Waiting and assignedRoom is null
+      const updateCondition: any = {
+        _id: applicantId,
+        interviewStatus: "Waiting",
+        $or: [
+          { assignedRoom: null },
+          { assignedRoom: { $exists: false } }
+        ]
+      };
+      if (activeEventId) {
+        updateCondition.eventId = activeEventId;
+      }
+
+      const updateResult = await Applicant.updateOne(
+        updateCondition,
+        {
+          $set: {
+            interviewStatus: "Interviewing",
+            assignedInterviewer: effectiveInterviewerName,
+            assignedRoom: room.roomNumber
+          }
+        },
+        { session: mongoSession }
+      );
+
+      if (updateResult.matchedCount === 0) {
+        await mongoSession.abortTransaction();
+        return NextResponse.json(
+          { success: false, error: "CANDIDATE IS NO LONGER AVAILABLE" },
+          { status: 409 }
+        );
+      }
+
+      // 2. Atomically occupy the room only if applicant is null
+      const roomUpdateResult = await InterviewRoom.updateOne(
+        {
+          roomNumber: Number(roomNumber),
+          isActive: { $ne: false },
+          applicant: null,
+        },
+        {
+          $set: {
+            applicant: candidate._id,
+            status: "Occupied",
+            interviewerId: storedInterviewerId,
+            interviewer: effectiveInterviewerName,
+            interviewSessionId,
+            eventId,
+            startedAt: startTime,
+            pausedAt: null,
+            accumulatedTime: 0,
+          }
+        },
+        { session: mongoSession }
+      );
+
+      if (roomUpdateResult.matchedCount === 0) {
+        await mongoSession.abortTransaction();
+        return NextResponse.json(
+          { success: false, error: "THIS ROOM ALREADY HAS AN ACTIVE INTERVIEW" },
+          { status: 409 }
+        );
+      }
+
+      // 3. Create durable session in MongoDB
+      await InterviewSession.create(
+        [
+          {
+            sessionId: interviewSessionId,
+            applicantId: candidate._id,
+            roomNumber: room.roomNumber,
+            eventId,
+            interviewerId: storedInterviewerId,
+            interviewerName: effectiveInterviewerName,
+            clerkUserId: storedClerkUserId,
+            status: "active",
+            startedAt: startTime,
+          }
+        ],
+        { session: mongoSession }
+      );
+
+      await mongoSession.commitTransaction();
+    } catch (txErr: any) {
+      if (mongoSession.inTransaction()) {
+        await mongoSession.abortTransaction();
+      }
+      throw txErr;
+    } finally {
+      await mongoSession.endSession();
+    }
+
+    const updatedRoom = await InterviewRoom.findOne({ roomNumber: Number(roomNumber) });
+
+    return NextResponse.json({ success: true, room: updatedRoom, interviewSessionId });
   } catch (error: any) {
     console.error("POST /api/interviewer/workspace/start Error:", error);
     return NextResponse.json(
